@@ -1,0 +1,87 @@
+{
+	"assetId": "sjfnbeaa",
+	"assetName": "Fine_American_Road_sjfnbeaa",
+	"assetType": "surface",
+	"assetSubType": "",
+	"assetTier": 0,
+	"assetRootPath": "/Game/Megascans/Surfaces/Fine_American_Road_sjfnbeaa",
+	"meshList": [],
+	"foliageAssetPaths": [],
+	"materialInstances": [
+		{
+			"instanceId": "mat1",
+			"instanceName": "MI_Fine_American_Road_sjfnbeaa_8K",
+			"instancePath": "/Game/Megascans/Surfaces/Fine_American_Road_sjfnbeaa/MI_Fine_American_Road_sjfnbeaa_8K.MI_Fine_American_Road_sjfnbeaa_8K",
+			"instanceMaster": "master1",
+			"type": "materialInstance",
+			"params": [
+				{
+					"paramName": "albedo",
+					"usedTextureId": "tex2"
+				},
+				{
+					"paramName": "normal",
+					"usedTextureId": "tex3"
+				},
+				{
+					"paramName": "ARD",
+					"usedTextureId": "tex1"
+				}
+			]
+		}
+	],
+	"textureSets": [
+		{
+			"textureId": "tex1",
+			"type": "ARD",
+			"resolution": "8K",
+			"name": "T_FineAmericanRoad_sjfnbeaa_8K_ORDp",
+			"path": "/Game/Megascans/Surfaces/Fine_American_Road_sjfnbeaa/T_FineAmericanRoad_sjfnbeaa_8K_ORDp.T_FineAmericanRoad_sjfnbeaa_8K_ORDp",
+			"isChannelPacked": false,
+			"channelPackInfo": [],
+			"pluggedIn": [
+				{
+					"matId": "mat1",
+					"matParams": "PackTexture"
+				}
+			]
+		},
+		{
+			"textureId": "tex2",
+			"type": "albedo",
+			"resolution": "8K",
+			"name": "T_Fine_American_Road_sjfnbeaa_8K_D",
+			"path": "/Game/Megascans/Surfaces/Fine_American_Road_sjfnbeaa/T_Fine_American_Road_sjfnbeaa_8K_D.T_Fine_American_Road_sjfnbeaa_8K_D",
+			"isChannelPacked": false,
+			"channelPackInfo": [],
+			"pluggedIn": [
+				{
+					"matId": "mat1",
+					"matParams": "albedo"
+				}
+			]
+		},
+		{
+			"textureId": "tex3",
+			"type": "normal",
+			"resolution": "8K",
+			"name": "T_Fine_American_Road_sjfnbeaa_8K_N",
+			"path": "/Game/Megascans/Surfaces/Fine_American_Road_sjfnbeaa/T_Fine_American_Road_sjfnbeaa_8K_N.T_Fine_American_Road_sjfnbeaa_8K_N",
+			"isChannelPacked": false,
+			"channelPackInfo": [],
+			"pluggedIn": [
+				{
+					"matId": "mat1",
+					"matParams": "normal"
+				}
+			]
+		}
+	],
+	"masterMaterials": [
+		{
+			"masterId": "master1",
+			"masterMaterialName": "M_MS_Surface_Material",
+			"path": "/Game/MSPresets/M_MS_Surface_Material/M_MS_Surface_Material"
+		}
+	]
+}
