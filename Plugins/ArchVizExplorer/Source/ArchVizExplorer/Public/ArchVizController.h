@@ -11,8 +11,25 @@
 #include "RoadConstructor.h"
 #include "RoadUIWidget.h"
 #include "HomeWidget.h"
+#include "BuildingConstructorWidget.h"
 #include <WallGenerator.h>
 #include "ArchVizController.generated.h"
+
+UENUM()
+enum class EWidgetSelection {
+	RoadConstructor,
+	BuildingConstructor,
+	InteriorDesign,
+	MaterialManagment
+};
+
+UENUM()
+enum class EBuildingComponentSelection {
+	Wall,
+	Floor,
+	Roof,
+	Door
+};
 
 UCLASS()
 class ARCHVIZEXPLORER_API AArchVizController : public APlayerController
@@ -22,6 +39,20 @@ class ARCHVIZEXPLORER_API AArchVizController : public APlayerController
 public:
 	AArchVizController();
 
+	//Common
+	UPROPERTY(EditDefaultsOnly,BlueprintReadOnly,category = "ArchVizController")
+	EWidgetSelection SelectedWidget; 
+
+	UFUNCTION(BlueprintCallable , category = "ArchVizController")
+	void ConstructionModeHandler(); 
+	
+	UFUNCTION(BlueprintCallable, category = "ArchVizController")
+	void BindWidgetDelegates();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category = "ArchVizController")
+	EBuildingComponentSelection SelectedBuildingComponent;
+
+	//RoadConstructor Mapping
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
 	UMaterialInstance* Material;
 	
@@ -61,9 +92,13 @@ public:
 	UPROPERTY(EditAnyWhere, category = "ArchVizController")
 	TSubclassOf<UHomeWidget> HomeWidgetClassRef;
 
-	//Wall Logic
+	//BuildingConstruction Logic
+
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<UBuildingConstructorWidget> BuildingConstructorWidgetClassRef;
+
 	UPROPERTY()
-	bool bBuildingConstructionMode;
+	UBuildingConstructorWidget* BuildingConstructorWidget;
 
 	UPROPERTY(EditAnyWhere , category = "ArchVizController")
 	TSubclassOf<AWallGenerator> WallActorClassRef;
@@ -118,8 +153,61 @@ private:
 	UFUNCTION()
 	void OnWidthChanged(float Value);
 
-	//Wall Logic
+	//BuildingConstructor Logic
+	UFUNCTION()
+	void OnBuildingConstructionPressed(); 
 
 	UFUNCTION()
+	void AddBuildingComponentsMapping();
+
+	//Wall Logic
+	UFUNCTION()
 	void WallProjectionOnTick();
+	UFUNCTION()
+	void SnapActor(float SnapValue);
+	UFUNCTION()
+	void OnGenerateWallPressed();
+	UFUNCTION()
+	void OnWallSegmentsValueChanged(float SegmentsNo);
+
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* GenerateWallAction;
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* RotateWallAction;
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* WallMapping;
+	UFUNCTION()
+	void GenerateWall();
+	UFUNCTION()
+	void RotateWall();
+
+	UFUNCTION()
+	void SetWallConstructionMapping();
+
+	//Door Logic
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* DoorMapping;
+	UFUNCTION()
+	void OnGenerateDoorPressed();
+
+	UFUNCTION()
+	void SetDoorConstructionMapping();
+	
+	//Floor Logic
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* FloorMapping;
+	UFUNCTION()
+	void OnGenerateFloorPressed();
+
+	UFUNCTION()
+	void SetFloorConstructionMapping();
+
+	//Roof Logic
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* RoofMapping;
+	UFUNCTION()
+	void OnGenerateRoofPressed();
+
+	UFUNCTION()
+	void SetRoofConstructionMapping();
 };

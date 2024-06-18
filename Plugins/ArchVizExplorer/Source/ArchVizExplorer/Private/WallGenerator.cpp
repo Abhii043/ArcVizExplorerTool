@@ -29,17 +29,24 @@ void AWallGenerator::DestroyWall()
 			Component = nullptr;
 		}
 	}
+	ComponentsArray.Empty();
 }
 
 
-void AWallGenerator::GenerateWall()
+void AWallGenerator::GenerateWall(const int32& SegmentsNo)
 {
 	DestroyWall();
 
-	auto WallStaticMeshComponent = NewObject<UStaticMeshComponent>(this);
-	WallStaticMeshComponent->SetupAttachment(WallSceneComponent);
-	WallStaticMeshComponent->RegisterComponentWithWorld(GetWorld());
-	if(WallStaticMesh){WallStaticMeshComponent->SetStaticMesh(WallStaticMesh);}
+	float MeshLength = WallStaticMesh->GetBounds().GetBox().GetSize().X;
 
-	ComponentsArray.Add(WallStaticMeshComponent);
+	for (int i{}; i < SegmentsNo; i++) {
+		UStaticMeshComponent* WallStaticMeshComponent = NewObject<UStaticMeshComponent>(this);
+		WallStaticMeshComponent->SetupAttachment(WallSceneComponent);
+		WallStaticMeshComponent->RegisterComponentWithWorld(GetWorld());
+		if (WallStaticMesh) {
+			WallStaticMeshComponent->SetStaticMesh(WallStaticMesh);
+		}
+		WallStaticMeshComponent->SetRelativeLocation(FVector(i * MeshLength, WallStaticMeshComponent->GetRelativeLocation().Y, WallStaticMeshComponent->GetRelativeLocation().Z));
+		ComponentsArray.Add(WallStaticMeshComponent);
+	}
 }

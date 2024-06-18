@@ -15,7 +15,10 @@ public:
 	AWallGenerator();
 
 	UFUNCTION()
-	void GenerateWall();
+	void GenerateWall(const int32& SegmentsNo);
+
+	UPROPERTY(EditDefaultsOnly , category = "WallGenerator")
+	UStaticMesh* WallStaticMesh;
 
 protected:
 	virtual void BeginPlay() override;
@@ -24,9 +27,6 @@ protected:
 private:
 	UPROPERTY()
 	USceneComponent* WallSceneComponent;
-
-	UPROPERTY(EditDefaultsOnly , category = "WallGenerator")
-	UStaticMesh* WallStaticMesh;
 
 	UPROPERTY()
 	TArray<UStaticMeshComponent*> ComponentsArray;
