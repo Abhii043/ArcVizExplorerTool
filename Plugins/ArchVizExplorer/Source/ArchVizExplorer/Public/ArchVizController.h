@@ -244,9 +244,25 @@ private:
 	UFUNCTION()
 	void EditWall();
 	UFUNCTION()
+	void OnWallDestroyerPressed();
+	UFUNCTION()
+	void ControlWallActorOnTick();
+
+	UFUNCTION()
+	void OnWallLocationXChanged(float Value);	
+	UFUNCTION()
+	void OnWallLocationYChanged(float Value);
+	UFUNCTION()
 	void EditDoor();
+	UFUNCTION()
+	void OnDoorDestroyerPressed();
 
 	UPROPERTY()
-	bool bBuildingEditorMode;
-
+	bool bBuildingEditorMode; 
+	UPROPERTY()
+	bool bIsDoorDestroyed;
+	UPROPERTY()
+	bool bIsWallProjection;
+	UPROPERTY()
+	bool bProjection;
 };

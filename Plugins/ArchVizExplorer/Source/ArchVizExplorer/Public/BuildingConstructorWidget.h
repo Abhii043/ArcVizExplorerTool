@@ -40,4 +40,24 @@ public:
 	UScrollBoxWidget* WallScrollBox; 
 	UPROPERTY(meta = (BindWidget))
 	UScrollBoxWidget* DoorScrollBox;
+
+	UPROPERTY(meta = (BindWidget))
+	UBorder* WallDestroyer; 
+	UPROPERTY(meta = (BindWidget))
+	UBorder* WallLocationBorder; 
+	UPROPERTY(meta = (BindWidget))
+	UButton* WallOnMouseControl; 
+	UPROPERTY(Transient , meta = (BindWidgetAnim))
+	UWidgetAnimation* PopUpAnimation;
+	UPROPERTY(meta = (BindWidget))
+	USpinBox* Wall_X;
+	UPROPERTY(meta = (BindWidget))
+	USpinBox* Wall_Y;
+
+	UPROPERTY(meta = (BindWidget))
+	UBorder* DoorDestroyer;
+	UPROPERTY(meta = (BindWidget))
+	UButton* WallDestroy; 
+	UPROPERTY(meta = (BindWidget))
+	UButton* DoorDestroy;
 };
