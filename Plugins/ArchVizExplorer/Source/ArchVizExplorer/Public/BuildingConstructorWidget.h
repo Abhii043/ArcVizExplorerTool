@@ -7,6 +7,10 @@
 #include <Components/SpinBox.h>
 #include <Components/Button.h>
 #include <Components/Border.h>
+#include <Components/ScrollBox.h>
+#include <Components/Image.h>
+#include <Components/TextBlock.h>
+#include "ScrollBoxWidget.h"
 #include "BuildingConstructorWidget.generated.h"
 
 UCLASS()
@@ -27,4 +31,13 @@ public:
 	UBorder* SegmentBorder;
 	UPROPERTY(meta = (BindWidget))
 	USpinBox* Segments;
+	UPROPERTY(meta = (BindWidget))
+	UButton* BuildingEditor;
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* EditorMode;
+
+	UPROPERTY(meta = (BindWidget))
+	UScrollBoxWidget* WallScrollBox; 
+	UPROPERTY(meta = (BindWidget))
+	UScrollBoxWidget* DoorScrollBox;
 };

@@ -40,7 +40,7 @@ void ARoadConstructor::DrawTriangleFromVertex(int32 Vertex0, int32 Vertex1, int3
 	Triangles.Add(Vertex2);
 }
 
-void ARoadConstructor::GenerateRoad(FVector& Dimensions , const FVector& LocationOffset)
+void ARoadConstructor::GenerateRoad(const FVector& Dimensions , const FVector& LocationOffset)
 {
 	Vertices.Reset();
 	Triangles.Reset();

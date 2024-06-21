@@ -4,7 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <ProceduralMeshComponent.h>
 #include "WallGenerator.generated.h"
+
+USTRUCT()
+struct FPair {
+	GENERATED_BODY()
+
+	UPROPERTY()
+	UStaticMesh* StaticMesh; 
+
+	UPROPERTY()
+	UProceduralMeshComponent* ProceduralMesh;
+};
 
 UCLASS()
 class ARCHVIZEXPLORER_API AWallGenerator : public AActor
@@ -20,17 +32,36 @@ public:
 	UPROPERTY(EditDefaultsOnly , category = "WallGenerator")
 	UStaticMesh* WallStaticMesh;
 
+	UPROPERTY()
+	float WallHeight; 
+
+	UPROPERTY()
+	TArray<UStaticMeshComponent*> ComponentsArray;
+
+	UPROPERTY()
+	TMap<int32, FPair> WallActorMap;
+
+	UFUNCTION()
+	void GenerateCube(const FVector& Dimensions, const FVector& LocationOffset, UProceduralMeshComponent* CubeComponent);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
 private:
 	UPROPERTY()
-	USceneComponent* WallSceneComponent;
-
-	UPROPERTY()
-	TArray<UStaticMeshComponent*> ComponentsArray;
+	USceneComponent* WallSceneComponent; 
+	
+	UPROPERTY(EditAnywhere,category = "WallGenerator")
+	UMaterialInterface* ProceduralMeshMaterial;
 
 	UFUNCTION()
 	void DestroyWall();
+
+	UFUNCTION()
+	void CheckReducedSegments(const int32& Segments);
+
+	UFUNCTION()
+	void SetDoorsAndPRoceduralMesh(const int32& Segments);
+
 };

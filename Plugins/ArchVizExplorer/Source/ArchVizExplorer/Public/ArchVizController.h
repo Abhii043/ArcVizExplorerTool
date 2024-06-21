@@ -13,6 +13,7 @@
 #include "HomeWidget.h"
 #include "BuildingConstructorWidget.h"
 #include <WallGenerator.h>
+#include "DoorDataAsset.h"
 #include "ArchVizController.generated.h"
 
 UENUM()
@@ -28,7 +29,8 @@ enum class EBuildingComponentSelection {
 	Wall,
 	Floor,
 	Roof,
-	Door
+	Door,
+	Editor
 };
 
 UCLASS()
@@ -52,6 +54,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, category = "ArchVizController")
 	EBuildingComponentSelection SelectedBuildingComponent;
 
+	UPROPERTY()
+	FHitResult HitResult;
+
 	//RoadConstructor Mapping
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
 	UMaterialInstance* Material;
@@ -61,9 +66,6 @@ public:
 
 	UPROPERTY()
 	FVector EndLocation;
-
-	UPROPERTY()
-	FHitResult HitResult;
 
 	UPROPERTY()
 	FVector RoadDimensions;
@@ -100,14 +102,20 @@ public:
 	UPROPERTY()
 	UBuildingConstructorWidget* BuildingConstructorWidget;
 
+	//Wall Logic
+
 	UPROPERTY(EditAnyWhere , category = "ArchVizController")
 	TSubclassOf<AWallGenerator> WallActorClassRef;
 
 	UPROPERTY()
 	AWallGenerator* WallActor;
 
-	UPROPERTY()
-	FHitResult WallHitResult;
+	//Door Logic
+
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UStaticMesh* DoorMesh{};
+
+	//Editor Logic
 	
 protected:
 	virtual void BeginPlay();
@@ -161,6 +169,16 @@ private:
 	void AddBuildingComponentsMapping();
 
 	//Wall Logic
+
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* GenerateWallAction;
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* RotateWallAction;
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* WallMapping;
+	UPROPERTY()
+	UStaticMesh* TempWallMesh;
+
 	UFUNCTION()
 	void WallProjectionOnTick();
 	UFUNCTION()
@@ -169,45 +187,66 @@ private:
 	void OnGenerateWallPressed();
 	UFUNCTION()
 	void OnWallSegmentsValueChanged(float SegmentsNo);
-
-	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
-	UInputAction* GenerateWallAction;
-	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
-	UInputAction* RotateWallAction;
-	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
-	UInputMappingContext* WallMapping;
 	UFUNCTION()
-	void GenerateWall();
+	void GenerateNewWall();
 	UFUNCTION()
 	void RotateWall();
-
 	UFUNCTION()
 	void SetWallConstructionMapping();
+	UFUNCTION()
+	void SetWallStaticMesh(const FWallData& WallData);
 
 	//Door Logic
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* GenerateDoorAction;
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* DoorMapping;
-	UFUNCTION()
-	void OnGenerateDoorPressed();
 
 	UFUNCTION()
+	void OnGenerateDoorPressed(); 
+	UFUNCTION()
 	void SetDoorConstructionMapping();
+	UFUNCTION()
+	void GenerateDoor();
+	UFUNCTION()
+	void SetDoor(const FDoorData& DoorData);
 	
 	//Floor Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* FloorMapping;
+
 	UFUNCTION()
 	void OnGenerateFloorPressed();
-
 	UFUNCTION()
 	void SetFloorConstructionMapping();
 
 	//Roof Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* RoofMapping;
-	UFUNCTION()
-	void OnGenerateRoofPressed();
 
 	UFUNCTION()
+	void OnGenerateRoofPressed();
+	UFUNCTION()
 	void SetRoofConstructionMapping();
+
+	//EditorMode Logic
+	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
+	UInputMappingContext* EditorMapping; 
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* SelectAssetAction;
+
+	UFUNCTION()
+	void OnBuildingEditorModePressed();
+	UFUNCTION()
+	void SetEditorModeMapping(); 
+	UFUNCTION()
+	void OnAssetSelection();
+	UFUNCTION()
+	void EditWall();
+	UFUNCTION()
+	void EditDoor();
+
+	UPROPERTY()
+	bool bBuildingEditorMode;
+
 };

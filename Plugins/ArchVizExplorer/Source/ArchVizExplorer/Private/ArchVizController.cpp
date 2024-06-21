@@ -4,8 +4,9 @@
 #include "ArchVizController.h"
 #include <Kismet/KismetMathLibrary.h>
 
-AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bEditorMode{ false }
+AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bEditorMode{ false }, bBuildingEditorMode{ false }
 {
+	
 }
 
 void AArchVizController::BeginPlay()
@@ -40,10 +41,16 @@ void AArchVizController::BindWidgetDelegates() {
 	}
 	if (BuildingConstructorWidget) {
 		BuildingConstructorWidget->GenerateWall->OnClicked.AddDynamic(this, &AArchVizController::OnGenerateWallPressed);
+		BuildingConstructorWidget->Segments->OnValueChanged.AddDynamic(this, &AArchVizController::OnWallSegmentsValueChanged);
+		BuildingConstructorWidget->WallScrollBox->AfterWallSelection.BindUFunction(this , "SetWallStaticMesh");
+
 		BuildingConstructorWidget->GenerateDoor->OnClicked.AddDynamic(this, &AArchVizController::OnGenerateDoorPressed);
+		BuildingConstructorWidget->DoorScrollBox->AfterDoorSelection.BindUFunction(this , "SetDoor");
+		
 		BuildingConstructorWidget->GenerateFloor->OnClicked.AddDynamic(this, &AArchVizController::OnGenerateFloorPressed);
 		BuildingConstructorWidget->GenerateRoof->OnClicked.AddDynamic(this, &AArchVizController::OnGenerateRoofPressed);
-		BuildingConstructorWidget->Segments->OnValueChanged.AddDynamic(this, &AArchVizController::OnWallSegmentsValueChanged);
+
+		BuildingConstructorWidget->BuildingEditor->OnClicked.AddDynamic(this, &AArchVizController::OnBuildingEditorModePressed);
 	}
 }
 
@@ -53,6 +60,10 @@ void AArchVizController::SetupInputComponent()
 
 	SetRoadConstructionMapping();
 	SetWallConstructionMapping();
+	SetDoorConstructionMapping();
+	SetFloorConstructionMapping();
+	SetRoofConstructionMapping();
+	SetEditorModeMapping();
 }
 
 void AArchVizController::Tick(float DeltaSeconds)
@@ -72,7 +83,11 @@ void AArchVizController::Tick(float DeltaSeconds)
 //BuildingConstruction
 void AArchVizController::OnBuildingConstructionPressed()
 {
+	if (WallActor) { WallActor->Destroy(); };
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
+
 	SelectedWidget = EWidgetSelection::BuildingConstructor;
 
 	if (GetLocalPlayer()) {
@@ -111,6 +126,10 @@ void AArchVizController::AddBuildingComponentsMapping()
 		if (SubSystem) { SubSystem->AddMappingContext(RoofMapping, 0); }
 		break;;
 	}
+	case EBuildingComponentSelection::Editor: {
+		if (SubSystem) { SubSystem->AddMappingContext(EditorMapping, 0); }
+		break;;
+	}
 	}
 }
 
@@ -120,6 +139,8 @@ void AArchVizController::OnGenerateWallPressed()
 	SelectedBuildingComponent = EBuildingComponentSelection::Wall;
 	AddBuildingComponentsMapping();
 
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Visible);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Visible);
 
 	if (WallActorClassRef) {
@@ -131,7 +152,9 @@ void AArchVizController::OnGenerateWallPressed()
 		if(BuildingConstructorWidget) {
 			Value = int32(BuildingConstructorWidget->Segments->GetValue());
 		}
-		WallActor->GenerateWall(Value);
+		if(WallActor){
+			WallActor->GenerateWall(Value);
+		}
 	}
 }
 
@@ -142,12 +165,12 @@ void AArchVizController::WallProjectionOnTick()
 	FVector CursorWorldDirection;
 
 	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
-	if (GetWorld()->LineTraceSingleByChannel(WallHitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
 	{
-		FVector ResultedLocation = WallHitResult.Location;
+		FVector ResultedLocation = HitResult.Location;
 		if(WallActor){
 			WallActor->SetActorLocation(ResultedLocation);
-			SnapActor(WallActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y/2);
+			if(WallActor->WallStaticMesh){SnapActor(WallActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y/2);}
 		}
 	}
 }
@@ -176,7 +199,7 @@ void AArchVizController::SetWallConstructionMapping()
 	WallMapping->MapKey(RotateWallAction, EKeys::R);
 
 	if (EIC) {
-		EIC->BindAction(GenerateWallAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateWall);
+		EIC->BindAction(GenerateWallAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateNewWall);
 		EIC->BindAction(RotateWallAction, ETriggerEvent::Completed, this, &AArchVizController::RotateWall);
 	}
 }
@@ -188,12 +211,13 @@ void AArchVizController::OnWallSegmentsValueChanged(float SegmentsNo)
 	}
 }
 
-void AArchVizController::GenerateWall()
+void AArchVizController::GenerateNewWall()
 {
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	WallActor = GetWorld()->SpawnActor<AWallGenerator>(WallActorClassRef, FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	WallActor = GetWorld()->SpawnActor<AWallGenerator>(WallActorClassRef, FVector::ZeroVector, FRotator::ZeroRotator, Params); 
+	if(TempWallMesh){WallActor->WallStaticMesh = TempWallMesh;}
 	WallActor->GenerateWall(BuildingConstructorWidget->Segments->GetValue());
 }
 
@@ -204,14 +228,27 @@ void AArchVizController::RotateWall()
 	}
 }
 
+void AArchVizController::SetWallStaticMesh(const FWallData& WallData) {
+	if (IsValid(WallActor)) {
+		TempWallMesh = WallData.Mesh;
+		WallActor->WallStaticMesh = TempWallMesh;
+		WallActor->GenerateWall(BuildingConstructorWidget->Segments->GetValue());
+	}
+}
+
 //Door Generator
 void AArchVizController::OnGenerateDoorPressed()
 {
 	if (WallActor) {
-		WallActor->Destroy();
+		if(!bBuildingEditorMode) {WallActor->Destroy();}
+		WallActor = nullptr;
 	}
-	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
+	bBuildingEditorMode = false;
 
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Visible);
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
+
+	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
 
 	SelectedBuildingComponent = EBuildingComponentSelection::Door;
 	AddBuildingComponentsMapping();
@@ -223,13 +260,64 @@ void AArchVizController::SetDoorConstructionMapping()
 
 	DoorMapping = NewObject<UInputMappingContext>(this);
 
-	/*GenerateWallAction = NewObject<UInputAction>(this);
-	GenerateWallAction->ValueType = EInputActionValueType::Boolean;*/
+	GenerateDoorAction = NewObject<UInputAction>(this);
+	GenerateDoorAction->ValueType = EInputActionValueType::Boolean;
 
-	/*DoorMapping->MapKey(GenerateWallAction, EKeys::LeftMouseButton);*/
+	DoorMapping->MapKey(GenerateDoorAction, EKeys::LeftMouseButton);
 
 	if (EIC) {
-		//EIC->BindAction(GenerateWallAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateWall);
+		EIC->BindAction(GenerateDoorAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateDoor);
+	}
+}
+
+void AArchVizController::GenerateDoor() {
+	if(!bBuildingEditorMode){GetHitResultUnderCursor(ECC_Visibility, true, HitResult);}
+
+	if (HitResult.bBlockingHit) {
+		if(Cast<AWallGenerator>(HitResult.GetActor())){
+			AWallGenerator* WallTempActor = Cast<AWallGenerator>(HitResult.GetActor());
+			if (Cast<UStaticMeshComponent>(HitResult.GetComponent())) {
+				UStaticMeshComponent* DoorComponent = Cast<UStaticMeshComponent>(HitResult.GetComponent());
+				if (DoorMesh) {
+					UProceduralMeshComponent* CubeComponent = NewObject<UProceduralMeshComponent>(WallTempActor);
+					float DoorHeight = DoorMesh->GetBounds().GetBox().GetSize().Z;
+					FVector WallDimensions = DoorComponent->GetStaticMesh()->GetBounds().GetBox().GetSize();
+
+					if(WallDimensions.Z == WallTempActor->WallHeight){
+						FVector DoorLocation = DoorComponent->GetRelativeLocation();
+						DoorLocation.Z -= (WallDimensions.Z / 2);
+						FVector CubeDimensions = FVector(WallDimensions.X, WallDimensions.Y, WallDimensions.Z - DoorHeight);
+						FVector CubeLocation = FVector(DoorLocation.X, DoorLocation.Y, DoorLocation.Z + DoorHeight + ((WallDimensions.Z - DoorHeight) / 2));
+
+						DoorComponent->SetRelativeRotation(FRotator(0, 90, 0));
+						DoorComponent->SetRelativeLocation(DoorLocation);
+						DoorComponent->SetStaticMesh(DoorMesh);
+
+						CubeComponent->SetupAttachment(WallTempActor->GetRootComponent());
+						CubeComponent->RegisterComponentWithWorld(GetWorld());
+
+						WallTempActor->GenerateCube(CubeDimensions, FVector::ZeroVector, CubeComponent);
+
+						CubeComponent->SetRelativeLocation(CubeLocation);
+						CubeComponent->SetVisibility(true);
+
+						int32 index = WallTempActor->ComponentsArray.IndexOfByKey(Cast<UStaticMeshComponent>(HitResult.GetComponent()));
+						WallTempActor->WallActorMap.Add(index , {DoorMesh , CubeComponent});
+					}
+					else {
+						DoorComponent->SetRelativeRotation(FRotator(0, 90, 0));
+						DoorComponent->SetStaticMesh(DoorMesh);
+					}
+				}
+			}
+		}
+	}
+}
+
+void AArchVizController::SetDoor(const FDoorData& DoorData) {
+	DoorMesh = DoorData.Mesh ;
+	if (bBuildingEditorMode) {
+		GenerateDoor();
 	}
 }
 
@@ -237,8 +325,12 @@ void AArchVizController::SetDoorConstructionMapping()
 void AArchVizController::OnGenerateFloorPressed()
 {
 	if (WallActor) {
-		WallActor->Destroy();
+		if (!bBuildingEditorMode) { WallActor->Destroy(); }
+		WallActor = nullptr;
 	}
+		bBuildingEditorMode = false;
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
 
 	SelectedBuildingComponent = EBuildingComponentSelection::Floor;
@@ -265,8 +357,12 @@ void AArchVizController::SetFloorConstructionMapping()
 void AArchVizController::OnGenerateRoofPressed()
 {
 	if (WallActor) {
-		WallActor->Destroy();
+		if (!bBuildingEditorMode) { WallActor->Destroy(); }
+		WallActor = nullptr;
 	}
+		bBuildingEditorMode = false;
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
 
 	SelectedBuildingComponent = EBuildingComponentSelection::Roof;
@@ -288,6 +384,80 @@ void AArchVizController::SetRoofConstructionMapping()
 		//EIC->BindAction(GenerateWallAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateWall);
 	}
 }
+
+//BuildingEditor Mode
+
+void AArchVizController::OnBuildingEditorModePressed()
+{
+	if (WallActor) {
+		if (!bBuildingEditorMode) { WallActor->Destroy(); }
+		WallActor = nullptr;
+	}
+	bBuildingEditorMode = true;
+
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
+
+	SelectedBuildingComponent = EBuildingComponentSelection::Editor;
+	AddBuildingComponentsMapping();
+}
+
+void AArchVizController::SetEditorModeMapping()
+{
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+
+	EditorMapping = NewObject<UInputMappingContext>(this);
+
+	SelectAssetAction = NewObject<UInputAction>(this);
+	SelectAssetAction->ValueType = EInputActionValueType::Boolean;
+
+	EditorMapping->MapKey(SelectAssetAction, EKeys::LeftMouseButton);
+
+	if (EIC) {
+		EIC->BindAction(SelectAssetAction, ETriggerEvent::Completed, this, &AArchVizController::OnAssetSelection);
+	}
+}
+
+void AArchVizController::OnAssetSelection()
+{
+	GetHitResultUnderCursor(ECC_Visibility,true,HitResult);
+
+	if (Cast<UProceduralMeshComponent>(HitResult.GetComponent())) {
+		if(Cast<AWallGenerator>(HitResult.GetActor())){
+			WallActor = Cast<AWallGenerator>(HitResult.GetActor());
+		}
+		EditWall();
+	}
+	else if (Cast<AWallGenerator>(HitResult.GetActor())) {
+		WallActor = Cast<AWallGenerator>(HitResult.GetActor());
+		UStaticMeshComponent* TempComponent = Cast<UStaticMeshComponent>(HitResult.GetComponent());
+
+		float HeightOfMesh = TempComponent->GetStaticMesh()->GetBounds().GetBox().GetSize().Z;
+
+		if (HeightOfMesh != WallActor->WallHeight) {
+			EditDoor();
+		}
+		else {
+			EditWall();
+		}
+	}
+
+}
+
+void AArchVizController::EditWall()
+{
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden); 
+	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Visible); 
+	BuildingConstructorWidget->Segments->SetValue(WallActor->ComponentsArray.Num());
+}
+
+void AArchVizController::EditDoor()
+{
+	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Visible);
+}
+
 
 //ConstructionMode Handler
 void AArchVizController::ConstructionModeHandler()
@@ -445,8 +615,10 @@ void AArchVizController::SetRoadConstructionMapping()
 
 void AArchVizController::OnRoadConstructionPressed()
 {
-	if (WallActor) {
-		WallActor->Destroy();
+	if (IsValid(WallActor)) {
+		if(!bBuildingEditorMode) {WallActor->Destroy();}
+		WallActor = nullptr;
+		bBuildingEditorMode = false;
 	}
 
 	if (bEditorMode) {

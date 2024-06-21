@@ -15,14 +15,14 @@ class ARCHVIZEXPLORER_API ARoadConstructor : public AActor
 public:	
 	ARoadConstructor();
 
-	UPROPERTY(VisibleDefaultsOnly, Category = "RoadConstructor")
+	UPROPERTY(VisibleAnywhere, Category = "RoadConstructor")
 	UProceduralMeshComponent* ProceduralMeshComponent;
 
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
 	UMaterialInstance* Material;
 
 	UFUNCTION(BlueprintCallable , Category = "RoadConstructor")
-	void GenerateRoad(FVector& Dimensions , const FVector& LocationOffset);
+	void GenerateRoad(const FVector& Dimensions , const FVector& LocationOffset);
 
 protected:
 	virtual void BeginPlay() override;
