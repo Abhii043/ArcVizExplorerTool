@@ -14,6 +14,8 @@
 #include "BuildingConstructorWidget.h"
 #include <WallGenerator.h>
 #include "DoorDataAsset.h"
+#include "FloorGenerator.h"
+#include "RoofGenerator.h"
 #include "ArchVizController.generated.h"
 
 UENUM()
@@ -26,6 +28,7 @@ enum class EWidgetSelection {
 
 UENUM()
 enum class EBuildingComponentSelection {
+	None,
 	Wall,
 	Floor,
 	Roof,
@@ -105,10 +108,10 @@ public:
 	//Wall Logic
 
 	UPROPERTY(EditAnyWhere , category = "ArchVizController")
-	TSubclassOf<AWallGenerator> WallActorClassRef;
+	TSubclassOf<AWallGenerator> WallGeneratorActorClassRef;
 
 	UPROPERTY()
-	AWallGenerator* WallActor;
+	AWallGenerator* WallGeneratorActor;
 
 	//Door Logic
 
@@ -168,6 +171,9 @@ private:
 	UFUNCTION()
 	void AddBuildingComponentsMapping();
 
+	UFUNCTION()
+	void SetDefaultBuildingMode();
+
 	//Wall Logic
 
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
@@ -182,7 +188,7 @@ private:
 	UFUNCTION()
 	void WallProjectionOnTick();
 	UFUNCTION()
-	void SnapActor(float SnapValue);
+	void SnapWallActor(float SnapValue);
 	UFUNCTION()
 	void OnGenerateWallPressed();
 	UFUNCTION()
@@ -214,20 +220,46 @@ private:
 	//Floor Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* FloorMapping;
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* GenerateFloorAction; 
+	UPROPERTY()
+	AFloorGenerator* FloorGeneratorActor;
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<AFloorGenerator> FloorGeneratorActorClassRef;
+	UPROPERTY()
+	FVector FloorStartLocation{};
 
 	UFUNCTION()
 	void OnGenerateFloorPressed();
 	UFUNCTION()
 	void SetFloorConstructionMapping();
+	UFUNCTION()
+	void GenerateFloor();
+	UFUNCTION()
+	void FloorProjectionOnTick();
+	UFUNCTION()
+	void SnapFloorActor(float SnapValue);
+	UFUNCTION()
+	void CompletedFloorGeneration();
 
 	//Roof Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* RoofMapping;
+	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
+	UInputAction* GenerateRoofAction; 
+	UPROPERTY()
+	ARoofGenerator* RoofGeneratorActor;
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<ARoofGenerator> RoofGeneratorActorClassRef;
 
 	UFUNCTION()
-	void OnGenerateRoofPressed();
+	void OnGenerateRoofPressed(); 
+	UFUNCTION()
+	void GenerateRoof();
 	UFUNCTION()
 	void SetRoofConstructionMapping();
+	UFUNCTION()
+	int8 CheckIfMultipleWallActorInZ(float& Location1, float& Location2, FVector& Locatiionn);
 
 	//EditorMode Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
@@ -241,21 +273,56 @@ private:
 	void SetEditorModeMapping(); 
 	UFUNCTION()
 	void OnAssetSelection();
+
 	UFUNCTION()
 	void EditWall();
 	UFUNCTION()
 	void OnWallDestroyerPressed();
 	UFUNCTION()
-	void ControlWallActorOnTick();
-
+	void ControlWallGeneratorActorOnTick();
 	UFUNCTION()
 	void OnWallLocationXChanged(float Value);	
 	UFUNCTION()
 	void OnWallLocationYChanged(float Value);
+
 	UFUNCTION()
 	void EditDoor();
 	UFUNCTION()
 	void OnDoorDestroyerPressed();
+
+	UFUNCTION()
+	void EditFloor();
+	UFUNCTION()
+	void OnFloorLocationXChanged(float Value);	
+	UFUNCTION()
+	void OnFloorLocationYChanged(float Value);
+	UFUNCTION()
+	void OnFloorDestroyPressed();
+	UFUNCTION()
+	void OnFloorLengthChanged(float Length); 
+	UFUNCTION()
+	void OnFloorWidthChanged(float Width);
+	UFUNCTION()
+	void OnFloorHeightChanged(float Height);
+	UFUNCTION()
+	void ControlFloorGeneratorActorOnTick();
+
+	UFUNCTION()
+	void EditRoof();
+	UFUNCTION()
+	void OnRoofLocationXChanged(float Value);	
+	UFUNCTION()
+	void OnRoofLocationYChanged(float Value);
+	UFUNCTION()
+	void OnRoofLocationZChanged(float Value);
+	UFUNCTION()
+	void OnRoofDestroyPressed();
+	UFUNCTION()
+	void OnRoofLengthChanged(float Length); 
+	UFUNCTION()
+	void OnRoofWidthChanged(float Width);
+	UFUNCTION()
+	void OnRoofHeightChanged(float Height);
 
 	UPROPERTY()
 	bool bBuildingEditorMode; 
@@ -265,4 +332,8 @@ private:
 	bool bIsWallProjection;
 	UPROPERTY()
 	bool bProjection;
+	UPROPERTY()
+	bool bIsFloorProjection;
+	UPROPERTY()
+	bool bIsRoofProjection;
 };

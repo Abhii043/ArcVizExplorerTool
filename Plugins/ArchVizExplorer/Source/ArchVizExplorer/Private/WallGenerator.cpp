@@ -31,8 +31,8 @@ void AWallGenerator::DestroyWall()
 	}
 	ComponentsArray.Empty();
 
-	if (!WallActorMap.IsEmpty()) {
-		for (auto& MapComponent : WallActorMap) {
+	if (!WallGeneratorActorMap.IsEmpty()) {
+		for (auto& MapComponent : WallGeneratorActorMap) {
 			MapComponent.Value.ProceduralMesh->DestroyComponent();
 			MapComponent.Value.ProceduralMesh = nullptr;
 		}
@@ -43,14 +43,14 @@ void AWallGenerator::CheckReducedSegments(const int32& Segments)
 {
 	TArray<int32> Indexs;
 
-	if(!WallActorMap.IsEmpty()){
-		for (auto& MapComponent : WallActorMap) {
+	if(!WallGeneratorActorMap.IsEmpty()){
+		for (auto& MapComponent : WallGeneratorActorMap) {
 			if (MapComponent.Key > (Segments - 1)) {
 				Indexs.Add(MapComponent.Key);
 			}
 		}
 		for (int i{}; i < Indexs.Num(); ++i) {
-			WallActorMap.FindAndRemoveChecked(Indexs[i]);
+			WallGeneratorActorMap.FindAndRemoveChecked(Indexs[i]);
 		}
 	}
 
@@ -59,9 +59,9 @@ void AWallGenerator::CheckReducedSegments(const int32& Segments)
 
 void AWallGenerator::SetDoorsAndPRoceduralMesh(const int32& Segments)
 {
-	if (!WallActorMap.IsEmpty()) {
+	if (!WallGeneratorActorMap.IsEmpty()) {
 		if(!ComponentsArray.IsEmpty()){
-			for (auto& MapComponent : WallActorMap) {
+			for (auto& MapComponent : WallGeneratorActorMap) {
 				if (MapComponent.Key <= (Segments - 1)) {
 					if (ComponentsArray[MapComponent.Key]) {
 						FVector MeshLocation = ComponentsArray[MapComponent.Key]->GetRelativeLocation();

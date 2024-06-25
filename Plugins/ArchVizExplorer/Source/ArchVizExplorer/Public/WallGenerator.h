@@ -39,7 +39,7 @@ public:
 	TArray<UStaticMeshComponent*> ComponentsArray;
 
 	UPROPERTY()
-	TMap<int32, FPair> WallActorMap;
+	TMap<int32, FPair> WallGeneratorActorMap;
 
 	UFUNCTION()
 	void GenerateCube(const FVector& Dimensions, const FVector& LocationOffset, UProceduralMeshComponent* CubeComponent);
