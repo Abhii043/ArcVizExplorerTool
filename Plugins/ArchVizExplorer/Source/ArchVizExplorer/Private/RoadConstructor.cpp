@@ -42,6 +42,8 @@ void ARoadConstructor::DrawTriangleFromVertex(int32 Vertex0, int32 Vertex1, int3
 
 void ARoadConstructor::GenerateRoad(const FVector& Dimensions , const FVector& LocationOffset)
 {
+	RoadDimensions = Dimensions;
+
 	Vertices.Reset();
 	Triangles.Reset();
 	Normals.Reset();

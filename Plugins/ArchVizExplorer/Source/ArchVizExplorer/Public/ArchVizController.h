@@ -12,6 +12,7 @@
 #include "RoadUIWidget.h"
 #include "HomeWidget.h"
 #include "BuildingConstructorWidget.h"
+#include "MaterialManagmentWidget.h"
 #include <WallGenerator.h>
 #include "DoorDataAsset.h"
 #include "FloorGenerator.h"
@@ -62,7 +63,7 @@ public:
 
 	//RoadConstructor Mapping
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
-	UMaterialInstance* Material;
+	UMaterialInterface* Material;
 	
 	UPROPERTY()
 	FVector StartLocation;
@@ -105,7 +106,7 @@ public:
 	UPROPERTY()
 	UBuildingConstructorWidget* BuildingConstructorWidget;
 
-	//Wall Logic
+				//Wall Logic
 
 	UPROPERTY(EditAnyWhere , category = "ArchVizController")
 	TSubclassOf<AWallGenerator> WallGeneratorActorClassRef;
@@ -113,12 +114,12 @@ public:
 	UPROPERTY()
 	AWallGenerator* WallGeneratorActor;
 
-	//Door Logic
-
+				//Door Logic
+	
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UStaticMesh* DoorMesh{};
 
-	//Editor Logic
+				//Editor Logic
 	
 protected:
 	virtual void BeginPlay();
@@ -174,7 +175,7 @@ private:
 	UFUNCTION()
 	void SetDefaultBuildingMode();
 
-	//Wall Logic
+				//Wall Logic
 
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
 	UInputAction* GenerateWallAction;
@@ -201,8 +202,8 @@ private:
 	void SetWallConstructionMapping();
 	UFUNCTION()
 	void SetWallStaticMesh(const FWallData& WallData);
-
-	//Door Logic
+	
+				//Door Logic
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
 	UInputAction* GenerateDoorAction;
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
@@ -217,7 +218,7 @@ private:
 	UFUNCTION()
 	void SetDoor(const FDoorData& DoorData);
 	
-	//Floor Logic
+				//Floor Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* FloorMapping;
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
@@ -242,7 +243,7 @@ private:
 	UFUNCTION()
 	void CompletedFloorGeneration();
 
-	//Roof Logic
+					//Roof Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* RoofMapping;
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
@@ -261,7 +262,7 @@ private:
 	UFUNCTION()
 	int8 CheckIfMultipleWallActorInZ(float& Location1, float& Location2, FVector& Locatiionn);
 
-	//EditorMode Logic
+					//EditorMode Logic
 	UPROPERTY(VisibleDefaultsOnly , category = "ArchVizController")
 	UInputMappingContext* EditorMapping; 
 	UPROPERTY(VisibleDefaultsOnly, category = "ArchVizController")
@@ -334,6 +335,27 @@ private:
 	bool bProjection;
 	UPROPERTY()
 	bool bIsFloorProjection;
+
+
+	//Material Managment Mode
+
+	UPROPERTY(EditAnyWhere , category = "ArchVizController")
+	TSubclassOf<UMaterialManagmentWidget> MaterialManagmentWidgetClassRef;
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	UMaterialManagmentWidget* MaterialManagmentWidget;
 	UPROPERTY()
-	bool bIsRoofProjection;
+	UInputMappingContext* MaterialManagmentMapping;
+	UPROPERTY()
+	UInputAction* SelectActorAction;
+
+	UFUNCTION()
+	void OnMaterialManagmentPressed();
+	UFUNCTION()
+	void SetMaterialManagmentMapping();
+	UFUNCTION()
+	void SelectActorOnClick();
+	UFUNCTION()
+	void ApplyRoadMaterial(const FRoadMaterialData& RoadMaterialData);
+	UFUNCTION()
+	void ApplyBuildingMaterial(const FBuildingMaterialData& BuildingMaterialData);
 };

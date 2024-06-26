@@ -9,6 +9,11 @@
 
 DECLARE_DELEGATE_OneParam(FAfterWallSelection, const FWallData&)
 DECLARE_DELEGATE_OneParam(FAfterDoorSelection, const FDoorData&)
+DECLARE_DELEGATE_OneParam(FAfterBuildingMaterialSelection, const FBuildingMaterialData&)
+DECLARE_DELEGATE_OneParam(FAfterRoadMaterialSelection, const FRoadMaterialData&)
+DECLARE_DELEGATE_OneParam(FAfterWallInteriorSelection, const FWallInteriorData&)
+DECLARE_DELEGATE_OneParam(FAfterFloorInteriorSelection, const FFloorInteriorData&)
+DECLARE_DELEGATE_OneParam(FAfterRoofInteriorSelection, const FRoofInteriorData&)
 
 
 UCLASS()
@@ -23,21 +28,47 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
 	UDoorDataAsset* DoorAsset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
+	UBuildingMaterialDataAsset* BuildingMaterialAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
+	URoadMaterialDataAsset* RoadMaterialAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
+	UWallInteriorDataAsset* WallInteriorAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
+	UFloorInteriorDataAsset* FloorInteriorAsset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
+	URoofInteriorDataAsset* RoofInteriorAsset;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBoxWidget")
 	EScrollBoxType ScrollBoxType;
 	UPROPERTY(EditAnywhere , BlueprintReadWrite , Category = "ScrollBox" , Meta = (UIMin = 1.0f , ClampMin = 1.0f , AllowPrivateAccess = "true"))
 	float ThumbnailSize{1.0f};
 
 	FAfterWallSelection AfterWallSelection ;
 	FAfterDoorSelection AfterDoorSelection ;
+	FAfterBuildingMaterialSelection AfterBuildingMaterialSelection;
+	FAfterRoadMaterialSelection AfterRoadMaterialSelection;
+	FAfterWallInteriorSelection AfterWallInteriorSelection;
+	FAfterFloorInteriorSelection AfterFloorInteriorSelection;
+	FAfterRoofInteriorSelection AfterRoofInteriorSelection;
 
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 protected:
 
 	UFUNCTION()
 	void PassWallInController(const FWallData& WallData);
-
 	UFUNCTION()
 	void PassDoorInController(const FDoorData& DoorData);
+	UFUNCTION()
+	void PassBuildingMaterialInController(const FBuildingMaterialData& BuildingMaterialData);
+	UFUNCTION()
+	void PassRoadMaterialInController(const FRoadMaterialData& RoadMaterialData);
+	UFUNCTION()
+	void PassWallInteriorInController(const FWallInteriorData& WallInteriorData);
+	UFUNCTION()
+	void PassFloorInteriorInController(const FFloorInteriorData& FloorInteriorData);
+	UFUNCTION()
+	void PassRoofInteriorInController(const FRoofInteriorData& RoofInteriorData);
 
 private:
 	TSharedPtr<SScrollBoxSlate> ScrollBoxAsset;

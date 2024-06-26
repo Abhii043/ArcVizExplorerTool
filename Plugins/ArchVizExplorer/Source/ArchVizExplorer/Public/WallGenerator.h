@@ -44,6 +44,9 @@ public:
 	UFUNCTION()
 	void GenerateCube(const FVector& Dimensions, const FVector& LocationOffset, UProceduralMeshComponent* CubeComponent);
 
+	UFUNCTION()
+	void ApplyMaterialToWallActor(UMaterialInterface* WallMaterial);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -55,6 +58,9 @@ private:
 	UPROPERTY(EditAnywhere,category = "WallGenerator")
 	UMaterialInterface* ProceduralMeshMaterial;
 
+	UPROPERTY()
+	TArray<int32> Indexs;
+
 	UFUNCTION()
 	void DestroyWall();
 
@@ -63,5 +69,4 @@ private:
 
 	UFUNCTION()
 	void SetDoorsAndPRoceduralMesh(const int32& Segments);
-
 };

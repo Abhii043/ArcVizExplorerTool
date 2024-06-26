@@ -41,7 +41,7 @@ void AWallGenerator::DestroyWall()
 
 void AWallGenerator::CheckReducedSegments(const int32& Segments)
 {
-	TArray<int32> Indexs;
+	Indexs.Empty();
 
 	if(!WallGeneratorActorMap.IsEmpty()){
 		for (auto& MapComponent : WallGeneratorActorMap) {
@@ -53,8 +53,6 @@ void AWallGenerator::CheckReducedSegments(const int32& Segments)
 			WallGeneratorActorMap.FindAndRemoveChecked(Indexs[i]);
 		}
 	}
-
-	Indexs.Empty();
 }
 
 void AWallGenerator::SetDoorsAndPRoceduralMesh(const int32& Segments)
@@ -202,5 +200,35 @@ void AWallGenerator::GenerateCube(const FVector& Dimensions, const FVector& Loca
 	CubeComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, Colors, Tangents, true);
 	CubeComponent->SetMaterial(0,ProceduralMeshMaterial);
 	
+}
+
+void AWallGenerator::ApplyMaterialToWallActor(UMaterialInterface* WallMaterial)
+{
+	UMaterialInstanceDynamic* DynamicWallMaterial1 = UMaterialInstanceDynamic::Create(WallMaterial, this);
+	UMaterialInstanceDynamic* DynamicWallMaterial2 = UMaterialInstanceDynamic::Create(WallMaterial, this);
+	if (DynamicWallMaterial1 && DynamicWallMaterial2) {
+		FVector WallDimensions = WallStaticMesh->GetBounds().GetBox().GetSize();
+
+
+		for (int i{} ;  i<ComponentsArray.Num() ; ++i) {
+			if (WallGeneratorActorMap.Contains(i)) {
+				float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+				float TileY = 1;
+				DynamicWallMaterial1->SetScalarParameterValue("TileX", TileX);
+				DynamicWallMaterial1->SetScalarParameterValue("TileY", TileY);
+
+				WallGeneratorActorMap[i].ProceduralMesh->SetMaterial(0, DynamicWallMaterial1);
+			}
+			else {
+				float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+				float TileY = (WallDimensions.Z) / (WallDimensions.Z - 212);
+				DynamicWallMaterial2->SetScalarParameterValue("TileX", TileX);
+				DynamicWallMaterial2->SetScalarParameterValue("TileY", TileY);
+
+				ComponentsArray[i]->SetMaterial(0, DynamicWallMaterial2);
+			}
+		}
+	}
+
 }
 

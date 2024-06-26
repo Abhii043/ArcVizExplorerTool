@@ -19,7 +19,10 @@ public:
 	UProceduralMeshComponent* ProceduralMeshComponent;
 
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
-	UMaterialInstance* Material;
+	UMaterialInterface* Material;
+
+	UPROPERTY()
+	FVector RoadDimensions{};
 
 	UFUNCTION(BlueprintCallable , Category = "RoadConstructor")
 	void GenerateRoad(const FVector& Dimensions , const FVector& LocationOffset);
