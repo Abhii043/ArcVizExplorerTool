@@ -4,7 +4,7 @@
 #include "ArchVizController.h"
 #include <Kismet/KismetMathLibrary.h>
 
-AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bEditorMode{ false }, bBuildingEditorMode{ false }, bIsWallProjection{ false }, SelectedBuildingComponent{ EBuildingComponentSelection::None }, bIsFloorProjection{ false }
+AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bRoadEditorMode{ false }, bBuildingEditorMode{ false }, bIsWallProjection{ false }, SelectedBuildingComponent{ EBuildingComponentSelection::None }, bIsFloorProjection{ false }
 {
 
 }
@@ -27,6 +27,9 @@ void AArchVizController::BeginPlay()
 	if (MaterialManagmentWidgetClassRef) {
 		MaterialManagmentWidget = CreateWidget<UMaterialManagmentWidget>(this, MaterialManagmentWidgetClassRef);
 	}
+	if (InteriorDesignWidgetClassRef) {
+		InteriorDesignWidget = CreateWidget<UInteriorDesignWidget>(this, InteriorDesignWidgetClassRef);
+	}
 	BindWidgetDelegates();
 }
 
@@ -35,13 +38,14 @@ void AArchVizController::BindWidgetDelegates() {
 		HomeWidget->RoadConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnRoadConstructionPressed);
 		HomeWidget->BuildingConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnBuildingConstructionPressed);
 		HomeWidget->MaterialManagment->OnClicked.AddDynamic(this, &AArchVizController::OnMaterialManagmentPressed);
+		HomeWidget->InteriorDesign->OnClicked.AddDynamic(this, &AArchVizController::OnInteriorDesignPressed);
 	}
 	if (RoadWidget) {
-		RoadWidget->EditorMode->OnClicked.AddDynamic(this, &AArchVizController::OnEditorModePressed);
+		RoadWidget->EditorMode->OnClicked.AddDynamic(this, &AArchVizController::OnRoadEditorModePressed);
 		RoadWidget->GenerateNewRoad->OnClicked.AddDynamic(this, &AArchVizController::GenerateNewRoad);
-		RoadWidget->WidthValueBox->OnValueChanged.AddDynamic(this, &AArchVizController::OnWidthChanged);
-		RoadWidget->Location_x->OnValueChanged.AddDynamic(this, &AArchVizController::OnLocationXChanged);
-		RoadWidget->Location_Y->OnValueChanged.AddDynamic(this, &AArchVizController::OnLocationYChanged);
+		RoadWidget->WidthValueBox->OnValueChanged.AddDynamic(this, &AArchVizController::OnRoadWidthChanged);
+		RoadWidget->Location_x->OnValueChanged.AddDynamic(this, &AArchVizController::OnRoadLocationXChanged);
+		RoadWidget->Location_Y->OnValueChanged.AddDynamic(this, &AArchVizController::OnRoadLocationYChanged);
 	}
 	if (BuildingConstructorWidget) {
 		BuildingConstructorWidget->GenerateWall->OnClicked.AddDynamic(this, &AArchVizController::OnGenerateWallPressed);
@@ -80,7 +84,11 @@ void AArchVizController::BindWidgetDelegates() {
 	if (MaterialManagmentWidget) {
 		MaterialManagmentWidget->RoadMaterialScrollBox->AfterRoadMaterialSelection.BindUFunction(this, "ApplyRoadMaterial");
 		MaterialManagmentWidget->BuildingMaterialScrollBox->AfterBuildingMaterialSelection.BindUFunction(this, "ApplyBuildingMaterial");
-		//MaterialManagmentWidget->BuildingMaterialScrollBox->AfterFloorInteriorSelection.BindUFunction(this, "ApplyFloorMaterial");
+	}
+	if (InteriorDesignWidget) {
+		InteriorDesignWidget->WallInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
+		InteriorDesignWidget->FloorInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
+		InteriorDesignWidget->RoofInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
 	}
 }
 
@@ -90,6 +98,8 @@ void AArchVizController::SetupInputComponent()
 
 	SetRoadConstructionMapping();
 	SetMaterialManagmentMapping();
+	SetInteriorDesignMapping();
+
 	SetWallConstructionMapping();
 	SetDoorConstructionMapping();
 	SetFloorConstructionMapping();
@@ -103,10 +113,24 @@ void AArchVizController::Tick(float DeltaSeconds)
 
 	if (SelectedWidget == EWidgetSelection::BuildingConstructor) {
 		if ((SelectedBuildingComponent == EBuildingComponentSelection::Wall) || bIsWallProjection) {
-			WallProjectionOnTick();
+			PreviewWallActor();
+		}
+		else if (SelectedBuildingComponent == EBuildingComponentSelection::Door) {
+			PreviewDoorActor();
 		}
 		else if (bIsFloorProjection) {
-			FloorProjectionOnTick();
+			PreviewFloorActor();
+		}
+	}
+	if (SelectedWidget == EWidgetSelection::InteriorDesign) {
+		if(InteriorDesignActor)
+		{
+		if(InteriorDesignActor->IdentityIndex == 0)
+			PreviewWallInteriorActor();
+		else if(InteriorDesignActor->IdentityIndex == 1)
+			PreviewFloorInteriorActor();
+		else if(InteriorDesignActor->IdentityIndex == 2)
+			PreviewRoofInteriorActor();
 		}
 	}
 }
@@ -118,6 +142,14 @@ void AArchVizController::OnBuildingConstructionPressed()
 		if(!bBuildingEditorMode){WallGeneratorActor->Destroy(); }
 		WallGeneratorActor = nullptr;
 	};
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (IsValid(InteriorDesignActor)) {
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;
+	}
 	if (IsValid(FloorGeneratorActor)) {
 		FloorGeneratorActor = nullptr;
 	}
@@ -214,6 +246,14 @@ void AArchVizController::SetDefaultBuildingMode()
 //Wall Generator
 void AArchVizController::OnGenerateWallPressed()
 {
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (IsValid(WallGeneratorActor)) {
+		WallGeneratorActor->Destroy();
+		WallGeneratorActor = nullptr;
+	}
 	SelectedBuildingComponent = EBuildingComponentSelection::Wall;
 	AddBuildingComponentsMapping();
 
@@ -237,7 +277,7 @@ void AArchVizController::OnGenerateWallPressed()
 	}
 }
 
-void AArchVizController::WallProjectionOnTick() 
+void AArchVizController::PreviewWallActor() 
 {
 	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, WallGeneratorActor);
 	FVector CursorWorldLocation;
@@ -323,10 +363,14 @@ void AArchVizController::SetWallStaticMesh(const FWallData& WallData) {
 
 //Door Generator
 void AArchVizController::OnGenerateDoorPressed()
-{
+{	bBuildingEditorMode = false;
 	if (WallGeneratorActor) {
 		WallGeneratorActor->Destroy();
 		WallGeneratorActor = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
 	}
 
 	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Visible);
@@ -355,7 +399,13 @@ void AArchVizController::SetDoorConstructionMapping()
 }
 
 void AArchVizController::GenerateDoor() {
-	if (!bBuildingEditorMode) { GetHitResultUnderCursor(ECC_Visibility, true, HitResult); }
+	if (DoorMeshActor) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (!bBuildingEditorMode) {
+		GetHitResultUnderCursor(ECC_Visibility,true,HitResult);
+	}
 
 	if (HitResult.bBlockingHit) {
 		if (Cast<AWallGenerator>(HitResult.GetActor())) {
@@ -385,13 +435,29 @@ void AArchVizController::GenerateDoor() {
 						CubeComponent->SetRelativeLocation(CubeLocation);
 						CubeComponent->SetVisibility(true);
 
-						int32 index = WallTempActor->ComponentsArray.IndexOfByKey(Cast<UStaticMeshComponent>(HitResult.GetComponent()));
-						WallTempActor->WallGeneratorActorMap.Add(index, { DoorMesh , CubeComponent });
+						int32 Index = WallTempActor->ComponentsArray.IndexOfByKey(Cast<UStaticMeshComponent>(HitResult.GetComponent()));
+						WallTempActor->WallGeneratorActorMap.Add(Index, { DoorMesh , CubeComponent });
+						WallTempActor->Indexs.Add(Index);
 					}
 					else {
 						DoorComponent->SetRelativeRotation(FRotator(0, 90, 0));
 						DoorComponent->SetStaticMesh(DoorMesh);
 					}
+				}
+			}
+			else if (Cast<UProceduralMeshComponent>(HitResult.GetComponent())) {
+				UProceduralMeshComponent* ProceduralComponent = Cast<UProceduralMeshComponent>(HitResult.GetComponent());
+				int key{};
+				for (int i = 0; i < WallTempActor->Indexs.Num(); i++) {
+					if (WallTempActor->WallGeneratorActorMap[WallTempActor->Indexs[i]].ProceduralMesh == ProceduralComponent)
+					{
+						key = WallTempActor->Indexs[i];
+						break;
+					}
+				}
+				if (WallTempActor->ComponentsArray[key]) {
+					WallTempActor->ComponentsArray[key]->SetRelativeRotation(FRotator(0, 90, 0));
+					WallTempActor->ComponentsArray[key]->SetStaticMesh(DoorMesh);
 				}
 			}
 		}
@@ -405,12 +471,66 @@ void AArchVizController::SetDoor(const FDoorData& DoorData) {
 	}
 }
 
+void AArchVizController::PreviewDoorActor()
+{
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, DoorMeshActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams)) {
+		if (AWallGenerator * WallActor = Cast<AWallGenerator>(HitResult.GetActor())) {
+			if (DoorMeshActor) {
+				FVector WallDirection = WallActor->GetActorForwardVector(); // 1,0,0
+				FVector PreviewDoorLocation{};
+				if (DoorMesh) {
+					if ((FindAngleBetweenVectors({ 1, 0, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ -1, 0, 0 }, WallDirection) == 0)) { // X || -X
+						if (HitResult.Location.Y > WallActor->GetActorLocation().Y) {
+							PreviewDoorLocation = HitResult.Location + FVector{ 0, DoorMesh->GetBounds().GetBox().GetSize().X / 2, 0 };
+						}
+						else {
+							PreviewDoorLocation = HitResult.Location + FVector{ 0, -DoorMesh->GetBounds().GetBox().GetSize().X / 2, 0 };
+						}
+					}
+					else if ((FindAngleBetweenVectors({ 0, 1, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ 0, -1, 0 }, WallDirection) == 0)) {
+						if (HitResult.Location.X > WallActor->GetActorLocation().X) {
+							PreviewDoorLocation = HitResult.Location + FVector{ DoorMesh->GetBounds().GetBox().GetSize().X / 2, 0, 0 };
+						}
+						else {
+							PreviewDoorLocation = HitResult.Location + FVector{ -DoorMesh->GetBounds().GetBox().GetSize().X / 2, 0, 0 };
+						}
+					}
+					PreviewDoorLocation.Z = WallActor->GetActorLocation().Z;
+					DoorMeshActor->SetActorLocation(PreviewDoorLocation);
+				}
+			}
+			else {
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				DoorMeshActor = GetWorld()->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), HitResult.Location, WallActor->GetActorRotation() + FRotator(0, 90, 0), SpawnParams);
+				DoorMeshActor->SetMobility(EComponentMobility::Movable);
+				DoorMeshActor->GetStaticMeshComponent()->SetStaticMesh(DoorMesh);
+			}
+		}
+		else {
+			if (DoorMeshActor) {
+				DoorMeshActor->Destroy();
+				DoorMeshActor = nullptr;
+			}
+		}
+	}
+}
+
 //Floor Generator
 void AArchVizController::OnGenerateFloorPressed()
 {
 	if (WallGeneratorActor) {
 		WallGeneratorActor->Destroy();
 		WallGeneratorActor = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
 	}
 
 	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
@@ -467,7 +587,7 @@ void AArchVizController::GenerateFloor() {
 	}
 }
 
-void AArchVizController::FloorProjectionOnTick()
+void AArchVizController::PreviewFloorActor()
 {
 	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, FloorGeneratorActor);
 	FVector CursorWorldLocation;
@@ -510,6 +630,10 @@ void AArchVizController::OnGenerateRoofPressed()
 		WallGeneratorActor->Destroy();
 		WallGeneratorActor = nullptr;
 	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
 	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
@@ -531,58 +655,117 @@ void AArchVizController::GenerateRoof()
 	FVector WallLocationY{};
 	FVector WallLocation_X{};
 	FVector WallLocation_Y{};
-	AWallGenerator* TempWallActor{};
+	AWallGenerator* TempWallActorX{};
+	AWallGenerator* TempWallActor_X{};
+	AWallGenerator* TempWallActorY{};
+	AWallGenerator* TempWallActor_Y{};
 
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(1, 0, 0) * 10000), ECC_Visibility, TraceParams)) {
 		if(Cast<AWallGenerator>(HitResult.GetActor())) {
 			WallCount++;
 			WallLocationX = HitResult.Location;
-			TempWallActor = Cast<AWallGenerator>(HitResult.GetActor());
+			TempWallActorX = Cast<AWallGenerator>(HitResult.GetActor());
+
 		}
 	}
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(-1, 0, 0) * 10000), ECC_Visibility, TraceParams)) {
 		if(Cast<AWallGenerator>(HitResult.GetActor())) {
 			WallCount++;
 			WallLocation_X = HitResult.Location;
+			TempWallActor_X = Cast<AWallGenerator>(HitResult.GetActor());
 		}
 	}
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(0, 1, 0) * 10000), ECC_Visibility, TraceParams)) {
 		if(Cast<AWallGenerator>(HitResult.GetActor())) {
 			WallCount++;
 			WallLocationY = HitResult.Location;
+			TempWallActorY = Cast<AWallGenerator>(HitResult.GetActor());
 		}
 	}
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(0, -1, 0) * 10000), ECC_Visibility, TraceParams)) {
 		if(Cast<AWallGenerator>(HitResult.GetActor())) {
 			WallCount++;
 			WallLocation_Y = HitResult.Location;
+			TempWallActor_Y = Cast<AWallGenerator>(HitResult.GetActor());
 		}
 	}
 
-	if(WallCount == 4) {
+	if (WallCount == 4) {
+		if ((TempWallActorX->WallHeight == TempWallActor_X->WallHeight) && (TempWallActorX->WallHeight == TempWallActorY->WallHeight) && TempWallActorX->WallHeight == TempWallActor_Y->WallHeight) {
+			float RoofLength = FMath::Abs(WallLocationX.X - WallLocation_X.X) + (TempWallActorX->WallStaticMesh->GetBounds().GetBox().GetSize().Y * 2);
+			float RoofWidth = FMath::Abs(WallLocationY.Y - WallLocation_Y.Y) + (TempWallActorX->WallStaticMesh->GetBounds().GetBox().GetSize().Y * 2);
+			float RoofHeight = 25;
 
-		float RoofLength = FMath::Abs(WallLocationX.X - WallLocation_X.X) + (TempWallActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y * 2);
-		float RoofWidth = FMath::Abs(WallLocationY.Y - WallLocation_Y.Y) + (TempWallActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y * 2);
-		float RoofHeight = 25;
+			float RoofLocationZ = TempWallActorX->GetActorLocation().Z + TempWallActorX->WallHeight;
+			float TempLocationZ = RoofLocationZ;
 
-		float RoofLocationZ = TempWallActor->GetActorLocation().Z + TempWallActor->WallHeight;
-		float TempLocationZ = RoofLocationZ;
+			int8 LoopCount = CheckIfMultipleWallActorInZ(RoofLocationZ, TempLocationZ, Location);
 
-		int8 LoopCount = CheckIfMultipleWallActorInZ(RoofLocationZ , TempLocationZ , Location);
+			FVector RoofLocation{ (WallLocationX.X + WallLocation_X.X) / 2, (WallLocationY.Y + WallLocation_Y.Y) / 2, RoofLocationZ };
 
-		FVector RoofLocation{ (WallLocationX.X + WallLocation_X.X) / 2, (WallLocationY.Y + WallLocation_Y.Y) / 2, RoofLocationZ };
+			if (LoopCount != -1) {
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		if(LoopCount != -1){
+				if (RoofGeneratorActorClassRef) {
+					RoofGeneratorActor = GetWorld()->SpawnActor<ARoofGenerator>(RoofGeneratorActorClassRef, RoofLocation, FRotator::ZeroRotator, Params);
+					RoofGeneratorActor->RoofDimensions = FVector(RoofLength, RoofWidth, RoofHeight);
+					RoofGeneratorActor->GenerateRoof({ RoofLength, RoofWidth, RoofHeight });
+				}
+			}
+		}
+		else {
+			/*BuildingConstructionWidget->RoofErrorMsgTxt->SetText(FText::FromString("The height of all walls in a house must be same to build a roof."));
+			BuildingConstructionWidget->PlayAnimation(BuildingConstructionWidget->RoofErrorMsgAnim);*/
+		}
+	}
+	else {
+		/*BuildingConstructionWidget->RoofErrorMsgTxt->SetText(FText::FromString("There must be 4 walls in a house to build a roof."));
+		BuildingConstructionWidget->PlayAnimation(BuildingConstructionWidget->RoofErrorMsgAnim);*/
+	} 
+	RoofGeneratorActor = nullptr;
+}
+
+void AArchVizController::GenerateRoofOnRightClick()
+{
+	GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
+
+	if (!RoofGeneratorActor) {
+		if (AWallGenerator * WallActor = Cast<AWallGenerator>(HitResult.GetActor())) {
+			WallActor = Cast<AWallGenerator>(HitResult.GetActor());
+			RoofInZ = WallActor->GetActorLocation().Z + WallActor->WallHeight;
+
+			RoofStartLocation = HitResult.Location;
+			RoofStartLocation.Z = RoofInZ;
+
 			FActorSpawnParameters Params;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 			if (RoofGeneratorActorClassRef) {
-				RoofGeneratorActor = GetWorld()->SpawnActor<ARoofGenerator>(RoofGeneratorActorClassRef, RoofLocation, FRotator::ZeroRotator, Params);
-				RoofGeneratorActor->RoofDimensions = FVector(RoofLength, RoofWidth, RoofHeight);
-				RoofGeneratorActor->GenerateRoof({ RoofLength, RoofWidth, RoofHeight });
+				RoofGeneratorActor = GetWorld()->SpawnActor<ARoofGenerator>(RoofGeneratorActorClassRef, RoofStartLocation, FRotator::ZeroRotator, Params);
 			}
 		}
-	}	
+	}
+	else {
+		FVector CurrentLocation = HitResult.Location;
+		CurrentLocation.Z = RoofInZ;
+		if (RoofGeneratorActor) {
+			float length = FMath::Abs(CurrentLocation.X - RoofStartLocation.X);
+			float width = FMath::Abs(CurrentLocation.Y - RoofStartLocation.Y);
+			float height = 25;
+
+			RoofGeneratorActor->RoofDimensions = FVector(length, width, height);
+
+			RoofGeneratorActor->SetActorLocation((RoofStartLocation + CurrentLocation) / 2);
+			RoofGeneratorActor->GenerateRoof(RoofGeneratorActor->RoofDimensions);
+			SnapRoofActor(12.5);
+		}
+	}
+}
+
+void AArchVizController::GenerateRoofOnRightClickCompleted()
+{
+	RoofGeneratorActor = nullptr;
 }
 
 void AArchVizController::SetRoofConstructionMapping()
@@ -594,10 +777,16 @@ void AArchVizController::SetRoofConstructionMapping()
 	GenerateRoofAction = NewObject<UInputAction>(this);
 	GenerateRoofAction->ValueType = EInputActionValueType::Boolean;
 
+	GenerateRoofWithRightClickAction = NewObject<UInputAction>(this);
+	GenerateRoofWithRightClickAction->ValueType = EInputActionValueType::Boolean;
+
 	RoofMapping->MapKey(GenerateRoofAction, EKeys::LeftMouseButton);
+	RoofMapping->MapKey(GenerateRoofWithRightClickAction, EKeys::RightMouseButton);
 
 	if (EIC) {
 		EIC->BindAction(GenerateRoofAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoof);
+		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Triggered, this, &AArchVizController::GenerateRoofOnRightClick);
+		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoofOnRightClickCompleted);
 	}
 }
 
@@ -605,33 +794,47 @@ int8 AArchVizController::CheckIfMultipleWallActorInZ(float& RoofLocationZ, float
 {
 	int8 Count{};
 	int8 LoopCount{};
+	AWallGenerator* TempWallActorX{};
+	AWallGenerator* TempWallActor_X{};
+	AWallGenerator* TempWallActorY{};
+	AWallGenerator* TempWallActor_Y{};
 	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true);
 	while (true) {
 		Location.Z = RoofLocationZ + 50;
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(0, -1, 0) * 10000), ECC_Visibility, TraceParams)) {
 			if (Cast<AWallGenerator>(HitResult.GetActor())) {
+				TempWallActor_Y = Cast<AWallGenerator>(HitResult.GetActor());
 				Count++;
 			}
 		}
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(0, 1, 0) * 10000), ECC_Visibility, TraceParams)) {
 			if (Cast<AWallGenerator>(HitResult.GetActor())) {
+				TempWallActorY = Cast<AWallGenerator>(HitResult.GetActor());
 				Count++;
 			}
 		}
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(1, 0, 0) * 10000), ECC_Visibility, TraceParams)) {
 			if (Cast<AWallGenerator>(HitResult.GetActor())) {
+				TempWallActorX = Cast<AWallGenerator>(HitResult.GetActor());
 				Count++;
 			}
 		}
 		if (GetWorld()->LineTraceSingleByChannel(HitResult, Location, Location + (FVector(-1, 0, 0) * 10000), ECC_Visibility, TraceParams)) {
 			if (Cast<AWallGenerator>(HitResult.GetActor())) {
+				TempWallActor_X = Cast<AWallGenerator>(HitResult.GetActor());
 				Count++;
 			}
 		}
 		if (Count >= 3) {
-			LoopCount++;
-			RoofLocationZ = RoofLocationZ + TempLocationZ;
-			Count = 0;
+			if ((TempWallActorX->WallHeight == TempWallActor_X->WallHeight) && (TempWallActorX->WallHeight == TempWallActorY->WallHeight) && TempWallActorX->WallHeight == TempWallActor_Y->WallHeight) {
+				LoopCount++;
+				RoofLocationZ = RoofLocationZ + TempLocationZ;
+				Count = 0;
+			}
+			else{
+				/*BuildingConstructionWidget->RoofErrorMsgTxt->SetText(FText::FromString("The height of all walls in a house must be same to build a roof."));
+			BuildingConstructionWidget->PlayAnimation(BuildingConstructionWidget->RoofErrorMsgAnim);*/
+			}
 		}
 		else {
 			if (Count > 0) {
@@ -644,10 +847,27 @@ int8 AArchVizController::CheckIfMultipleWallActorInZ(float& RoofLocationZ, float
 	return LoopCount;
 }
 
+void AArchVizController::SnapRoofActor(float SnapValue) {
+	if (IsValid(RoofGeneratorActor)) {
+		auto CurrentLocation = RoofGeneratorActor->GetActorLocation();
+		CurrentLocation.X = FMath::RoundToFloat(CurrentLocation.X / SnapValue) * SnapValue;
+		CurrentLocation.Y = FMath::RoundToFloat(CurrentLocation.Y / SnapValue) * SnapValue;
+		RoofGeneratorActor->SetActorLocation(CurrentLocation);
+	}
+}
+
 //BuildingEditor Mode
 
 void AArchVizController::OnBuildingEditorModePressed()
 {
+	if (IsValid(WallGeneratorActor)) {
+		WallGeneratorActor->Destroy();
+		WallGeneratorActor = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
 	if (!bBuildingEditorMode) {
 		BuildingConstructorWidget->BuildingEditorMode->SetText(FText::FromString("Exit Editor Mode"));
 		if (WallGeneratorActor) {
@@ -1102,32 +1322,94 @@ void AArchVizController::ConstructionModeHandler()
 {
 	switch (SelectedWidget) {
 	case EWidgetSelection::RoadConstructor: {
-		if(RoadWidgetClassRef) {RoadWidget->AddToViewport();}
-		if (BuildingConstructorWidget->IsInViewport()) {
-			BuildingConstructorWidget->RemoveFromParent();
+		if(RoadWidgetClassRef) {
+			if(RoadWidget){
+				RoadWidget->AddToViewport();
+			}
 		}
-		if (MaterialManagmentWidget->IsInViewport()) {
-			MaterialManagmentWidget->RemoveFromParent();
+		if(BuildingConstructorWidget){
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if(MaterialManagmentWidget){
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		if(InteriorDesignWidget){
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
 		}
 		break;
 	}
 	case EWidgetSelection::BuildingConstructor: {
-		if(BuildingConstructorWidgetClassRef) {BuildingConstructorWidget->AddToViewport();}
-		if (RoadWidget->IsInViewport()) {
-			RoadWidget->RemoveFromParent();
+		if(BuildingConstructorWidgetClassRef) {
+			if(BuildingConstructorWidget){
+				BuildingConstructorWidget->AddToViewport();
+			}
 		}
-		if (MaterialManagmentWidget->IsInViewport()) {
-			MaterialManagmentWidget->RemoveFromParent();
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
 		}
 		break;
 	}
 	case EWidgetSelection::MaterialManagment: {
-		if(MaterialManagmentWidgetClassRef) {MaterialManagmentWidget->AddToViewport();}
-		if (RoadWidget->IsInViewport()) {
-			RoadWidget->RemoveFromParent();
+		if(MaterialManagmentWidgetClassRef) {
+				if(MaterialManagmentWidget){	
+				MaterialManagmentWidget->AddToViewport();
+				}
 		}
-		if (BuildingConstructorWidget->IsInViewport()) {
-			BuildingConstructorWidget->RemoveFromParent();
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::InteriorDesign: {
+		if (InteriorDesignWidgetClassRef) { 
+			if(InteriorDesignWidget){
+				InteriorDesignWidget->AddToViewport();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
 		}
 		break;
 	}
@@ -1137,7 +1419,7 @@ void AArchVizController::ConstructionModeHandler()
 //Road Constructor
 void AArchVizController::GetRoadLocationOnClick()
 {
-	if (!bEditorMode) {
+	if (!bRoadEditorMode) {
 		FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true);
 		FVector CursorWorldLocation;
 		FVector CursorWorldDirection;
@@ -1147,7 +1429,7 @@ void AArchVizController::GetRoadLocationOnClick()
 				DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
 				if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
 				{
-					StartLocation = HitResult.Location;
+					RoadStartLocation = HitResult.Location;
 				}
 				bGetLocation = false;
 			}
@@ -1155,7 +1437,7 @@ void AArchVizController::GetRoadLocationOnClick()
 				DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
 				if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
 				{
-					EndLocation = HitResult.Location;
+					RoadEndLocation = HitResult.Location;
 				}
 				GenerateRoad();
 				bFirstRoad = false;
@@ -1165,31 +1447,33 @@ void AArchVizController::GetRoadLocationOnClick()
 			DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
 			if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
 			{
-				FVector ForwardVectorOfPrevRoad = (EndLocation - StartLocation).GetSafeNormal();
+				FVector ForwardVectorOfPrevRoad = (RoadEndLocation - RoadStartLocation).GetSafeNormal();
 				FVector LeftVectorOfPrevRoad = FVector::CrossProduct(ForwardVectorOfPrevRoad, FVector::UpVector);
-				FVector BackVectorOfPrevRoad = (StartLocation - EndLocation).GetSafeNormal();
+				FVector BackVectorOfPrevRoad = (RoadStartLocation - RoadEndLocation).GetSafeNormal();
 				FVector RightVectorOfPrevRoad = FVector::CrossProduct(FVector::UpVector, ForwardVectorOfPrevRoad);
 
-				StartLocation = EndLocation;
-				EndLocation = HitResult.Location;
+				RoadStartLocation = RoadEndLocation;
+				RoadEndLocation = HitResult.Location;
 
-				float Distance = FVector::Dist(EndLocation, StartLocation);
+				float Distance = FVector::Dist(RoadEndLocation, RoadStartLocation);
 
-				FVector ForwardVectorOfCurrRoad = EndLocation - StartLocation;
+				FVector ForwardVectorOfCurrRoad = RoadEndLocation - RoadStartLocation;
 				float AngleOfPointWithLeftVecOfPrev = FindAngleBetweenVectors(ForwardVectorOfCurrRoad, LeftVectorOfPrevRoad);
 				float AngleOfPointWithBackVecOfPrev = FindAngleBetweenVectors(ForwardVectorOfCurrRoad, BackVectorOfPrevRoad);
 
 				FVector EndPointDir;
 				if ((AngleOfPointWithLeftVecOfPrev >= 0 && AngleOfPointWithLeftVecOfPrev < 45) || (AngleOfPointWithBackVecOfPrev <= 90 && AngleOfPointWithLeftVecOfPrev <= 90)) {
+					RoadStartLocation += (ForwardVectorOfPrevRoad * 125) + (RightVectorOfPrevRoad * 125);
 					EndPointDir = LeftVectorOfPrevRoad;
 				}
 				else if ((AngleOfPointWithLeftVecOfPrev > 135 && AngleOfPointWithLeftVecOfPrev <= 180) || (AngleOfPointWithBackVecOfPrev <= 90 && AngleOfPointWithLeftVecOfPrev >= 90)) {
+					RoadStartLocation += (ForwardVectorOfPrevRoad * 125) + (LeftVectorOfPrevRoad * 125);
 					EndPointDir = RightVectorOfPrevRoad;
 				}
 				else if (AngleOfPointWithLeftVecOfPrev > 45 && AngleOfPointWithLeftVecOfPrev <= 135) {
 					EndPointDir = ForwardVectorOfPrevRoad;
 				}
-				EndLocation = StartLocation + (EndPointDir.GetSafeNormal() * Distance);
+				RoadEndLocation = RoadStartLocation + (EndPointDir.GetSafeNormal() * Distance);
 			}
 			GenerateRoad();
 		}
@@ -1209,11 +1493,11 @@ void AArchVizController::GetRoadLocationOnClick()
 
 void AArchVizController::GenerateRoad()
 {
-	FVector RoadLocation = (StartLocation + EndLocation) / 2;
-	FRotator RoadRotation = UKismetMathLibrary::FindLookAtRotation(StartLocation, EndLocation);
+	FVector RoadLocation = (RoadStartLocation + RoadEndLocation) / 2;
+	FRotator RoadRotation = UKismetMathLibrary::FindLookAtRotation(RoadStartLocation, RoadEndLocation);
 
-	float length = FVector::Dist(StartLocation, EndLocation);
-	float width = 100;
+	float length = FVector::Dist(RoadStartLocation, RoadEndLocation);
+	float width = 250;
 	float height = 10;
 
 	RoadDimensions = FVector(length, width, height);
@@ -1221,10 +1505,11 @@ void AArchVizController::GenerateRoad()
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	RoadConstructor = GetWorld()->SpawnActor<ARoadConstructor>(ARoadConstructor::StaticClass(), RoadLocation, RoadRotation, Params);
+	if(RoadConstructorClassRef){
+		RoadConstructor = GetWorld()->SpawnActor<ARoadConstructor>(RoadConstructorClassRef, RoadLocation, RoadRotation, Params);
+	}
 
 	if (RoadConstructor) {
-		RoadConstructor->Material = Material;
 		RoadConstructor->GenerateRoad(RoadDimensions, FVector(0, 0, RoadDimensions.Z / 2));
 	}
 }
@@ -1273,15 +1558,23 @@ void AArchVizController::OnRoadConstructionPressed()
 		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
 		WallGeneratorActor = nullptr;
 	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (IsValid(InteriorDesignActor)) {
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;
+	}
 	if (IsValid(FloorGeneratorActor)) {
 		FloorGeneratorActor = nullptr;
 	}
 	if (IsValid(RoofGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
+		RoofGeneratorActor = nullptr;
 	}
 
-	if (bEditorMode) {
-		OnEditorModePressed();
+	if (bRoadEditorMode) {
+		OnRoadEditorModePressed();
 	}
 
 	SelectedWidget = EWidgetSelection::RoadConstructor;
@@ -1296,7 +1589,7 @@ void AArchVizController::OnRoadConstructionPressed()
 	ConstructionModeHandler();
 }
 
-void AArchVizController::OnLocationXChanged(float Value)
+void AArchVizController::OnRoadLocationXChanged(float Value)
 {
 	if (RoadConstructor) {
 		FVector Location = RoadConstructor->GetActorLocation();
@@ -1304,7 +1597,7 @@ void AArchVizController::OnLocationXChanged(float Value)
 	}
 }
 
-void AArchVizController::OnLocationYChanged(float Value)
+void AArchVizController::OnRoadLocationYChanged(float Value)
 {
 	if (RoadConstructor) {
 		FVector Location = RoadConstructor->GetActorLocation();
@@ -1312,25 +1605,25 @@ void AArchVizController::OnLocationYChanged(float Value)
 	}
 }
 
-void AArchVizController::OnEditorModePressed()
+void AArchVizController::OnRoadEditorModePressed()
 {
-	if (!bEditorMode) {
+	if (!bRoadEditorMode) {
 		FText Text = FText::FromString("Close Editor Mode");
 		RoadWidget->EditorText->SetText(Text);
 		RoadWidget->OutlineBorder->SetVisibility(ESlateVisibility::Visible);
 		RoadWidget->GenerateNewRoad->SetVisibility(ESlateVisibility::Hidden);
-		bEditorMode = true;
+		bRoadEditorMode = true;
 	}
 	else {
 		FText Text = FText::FromString("Editor Mode");
 		RoadWidget->EditorText->SetText(Text);
 		RoadWidget->OutlineBorder->SetVisibility(ESlateVisibility::Hidden);
 		RoadWidget->GenerateNewRoad->SetVisibility(ESlateVisibility::Visible);
-		bEditorMode = false;
+		bRoadEditorMode = false;
 	}
 }
 
-void AArchVizController::OnWidthChanged(float Value)
+void AArchVizController::OnRoadWidthChanged(float Value)
 {
 	if (RoadConstructor) { RoadConstructor->SetActorScale3D(FVector(1, Value / RoadDimensions.Y, 1)); }
 }
@@ -1343,11 +1636,19 @@ void AArchVizController::OnMaterialManagmentPressed()
 		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
 		WallGeneratorActor = nullptr;
 	}
+	if (IsValid(InteriorDesignActor)) {
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
 	if (IsValid(FloorGeneratorActor)) {
 		FloorGeneratorActor = nullptr;
 	}
 	if (IsValid(RoofGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
+		RoofGeneratorActor = nullptr;
 	}
 
 	SelectedWidget = EWidgetSelection::MaterialManagment;
@@ -1459,4 +1760,189 @@ void AArchVizController::ApplyBuildingMaterial(const FBuildingMaterialData& Buil
 			RoofGeneratorActor->RoofComponent->SetMaterial(0, DynamicRoofMaterial);
 		}
 	}
+}
+
+//Interior Design Mode
+void AArchVizController::OnInteriorDesignPressed()
+{
+	if (IsValid(WallGeneratorActor)) {
+		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
+		WallGeneratorActor = nullptr;
+	}
+	if (IsValid(InteriorDesignActor)) {
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (IsValid(FloorGeneratorActor)) {
+		FloorGeneratorActor = nullptr;
+	}
+	if (IsValid(RoofGeneratorActor)) {
+		RoofGeneratorActor = nullptr;
+	}
+
+	SelectedWidget = EWidgetSelection::InteriorDesign;
+
+	if (GetLocalPlayer()) {
+		UEnhancedInputLocalPlayerSubsystem* SubSystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+		if (SubSystem) {
+			SubSystem->ClearAllMappings();
+			SubSystem->AddMappingContext(InteriorDesignMapping, 0);
+		}
+	}
+
+	ConstructionModeHandler();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+}
+
+void AArchVizController::SetInteriorDesignMapping()
+{
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+
+	InteriorDesignMapping = NewObject<UInputMappingContext>(this);
+
+	PlaceInteriorAction = NewObject<UInputAction>(this);
+	PlaceInteriorAction->ValueType = EInputActionValueType::Boolean;
+
+	RotateInteriorAction = NewObject<UInputAction>(this);
+	RotateInteriorAction->ValueType = EInputActionValueType::Boolean;
+
+	InteriorDesignMapping->MapKey(PlaceInteriorAction, EKeys::LeftMouseButton);
+	InteriorDesignMapping->MapKey(RotateInteriorAction, EKeys::R);
+
+	if (EIC) {
+		EIC->BindAction(PlaceInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::PlaceInteriorOnClick);
+		EIC->BindAction(RotateInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::RotateInterior);
+	}
+}
+
+void AArchVizController::PlaceInteriorOnClick()
+{
+	FVector LastLocation;
+	if (InteriorDesignActor) {
+		LastLocation = InteriorDesignActor->GetActorLocation();
+	}
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, InteriorDesignActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams);
+
+	if (InteriorDesignActor->IdentityIndex == 0) {
+		if (Cast<AWallGenerator>(HitResult.GetActor())) {
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
+		}
+	}
+	else if (InteriorDesignActor->IdentityIndex == 1) {
+		if (Cast<AFloorGenerator>(HitResult.GetActor())) {
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
+		}
+	}
+	else if (InteriorDesignActor->IdentityIndex == 2) {
+		if (Cast<ARoofGenerator>(HitResult.GetActor())) {
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
+		}
+	}
+}
+
+void AArchVizController::RotateInterior()
+{
+	if (InteriorDesignActor) {
+		InteriorDesignActor->SetActorRotation(InteriorDesignActor->GetActorRotation() + FRotator(0,90,0));
+	}
+}
+
+void AArchVizController::ApplyInterior(const FInteriorData& InteriorData)
+{
+	if (InteriorDesignActor) {
+		InteriorDesignActor->IdentityIndex = InteriorData.IdentityIndex;
+		if(InteriorData.InteriorMesh){InteriorDesignActor->SetInteriorMesh(InteriorData.InteriorMesh);}
+	}
+}
+
+void AArchVizController::PreviewWallInteriorActor()
+{
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, InteriorDesignActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
+	{
+		if (AWallGenerator* WallActor = Cast<AWallGenerator>(HitResult.GetActor())) {
+			if (InteriorDesignActor) {
+				FVector WallDirection = WallActor->GetActorForwardVector(); // 1,0,0
+				FVector PreviewInteriorLocation{};
+				if (InteriorDesignActor->InteriorMesh) {
+					if ((FindAngleBetweenVectors({ 1, 0, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ -1, 0, 0 }, WallDirection) == 0)) { // X || -X
+						if (HitResult.Location.Y > WallActor->GetActorLocation().Y) {
+							PreviewInteriorLocation = HitResult.Location + FVector{ 0, InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0 };
+						}
+						else {
+							PreviewInteriorLocation = HitResult.Location + FVector{ 0, -InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0 };
+						}
+					}
+					else if ((FindAngleBetweenVectors({ 0, 1, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ 0, -1, 0 }, WallDirection) == 0)) {
+						if (HitResult.Location.X > WallActor->GetActorLocation().X) {
+							PreviewInteriorLocation = HitResult.Location + FVector{ InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0, 0 };
+						}
+						else {
+							PreviewInteriorLocation = HitResult.Location + FVector{ -InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0, 0 };
+						}
+					}
+					InteriorDesignActor->SetActorLocation(PreviewInteriorLocation);
+				}
+			}
+		}
+	}
+}
+
+void AArchVizController::PreviewFloorInteriorActor()
+{
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, InteriorDesignActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
+	{
+		if (AFloorGenerator* FloorActor = Cast<AFloorGenerator>(HitResult.GetActor())) {
+			if (InteriorDesignActor) {
+				InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor , HitResult.Location));
+			}
+		}
+	}
+}
+
+void AArchVizController::PreviewRoofInteriorActor()
+{
+}
+
+FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorActor , FVector Location)
+{
+	if(InteriorActor){
+		FVector PivotLocation = InteriorActor->InteriorMeshComponent->GetComponentLocation();
+
+		FBox BoundingBox = InteriorActor->InteriorMesh->GetBoundingBox();
+		FVector Center = BoundingBox.GetCenter();
+
+		if (PivotLocation.Equals(Center)) {
+			float PreviewInteriorMeshLocationZ = (InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Z / 2);
+			Location.Z = PreviewInteriorMeshLocationZ;
+		}
+	}
+	return Location;
 }

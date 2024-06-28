@@ -10,10 +10,10 @@ USTRUCT(BlueprintType)
 struct FRoadMaterialData {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, category = "WallAsset")
+	UPROPERTY(EditAnywhere, category = "RoadMaterialAsset")
 	UTexture2D* Image;
 
-	UPROPERTY(EditAnywhere, category = "WallAsset")
+	UPROPERTY(EditAnywhere, category = "RoadMaterialAsset")
 	UMaterialInterface* Material;
 };
 

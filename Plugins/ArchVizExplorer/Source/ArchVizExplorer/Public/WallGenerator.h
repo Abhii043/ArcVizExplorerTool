@@ -46,6 +46,8 @@ public:
 
 	UFUNCTION()
 	void ApplyMaterialToWallActor(UMaterialInterface* WallMaterial);
+	UPROPERTY()
+	TArray<int32> Indexs;
 
 protected:
 	virtual void BeginPlay() override;
@@ -57,9 +59,6 @@ private:
 	
 	UPROPERTY(EditAnywhere,category = "WallGenerator")
 	UMaterialInterface* ProceduralMeshMaterial;
-
-	UPROPERTY()
-	TArray<int32> Indexs;
 
 	UFUNCTION()
 	void DestroyWall();

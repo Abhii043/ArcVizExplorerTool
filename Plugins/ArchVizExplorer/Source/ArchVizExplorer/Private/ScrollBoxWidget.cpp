@@ -12,12 +12,7 @@ TSharedRef<SWidget> UScrollBoxWidget::RebuildWidget()
 		ScrollBoxAsset->OnDoorSelection.BindUFunction(this, "PassDoorInController");
 		ScrollBoxAsset->OnBuildingMaterialSelection.BindUFunction(this, "PassBuildingMaterialInController");
 		ScrollBoxAsset->OnRoadMaterialSelection.BindUFunction(this, "PassRoadMaterialInController");
-		ScrollBoxAsset->OnWallInteriorSelection.BindUFunction(this, "PassWallInteriorInController");
-		ScrollBoxAsset->OnFloorInteriorSelection.BindUFunction(this, "PassFloorInteriorInController");
-		ScrollBoxAsset->OnRoofInteriorSelection.BindUFunction(this, "PassRoofInteriorInController");
-
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Blue, "Scroll Box");
-
+		ScrollBoxAsset->OnInteriorSelection.BindUFunction(this, "PassInteriorInController");
 	}
 	return ScrollBoxAsset.ToSharedRef();
 }
@@ -42,16 +37,8 @@ void UScrollBoxWidget::PassRoadMaterialInController(const FRoadMaterialData& Roa
 	AfterRoadMaterialSelection.ExecuteIfBound(RoadMaterialData);
 }
 
-void UScrollBoxWidget::PassWallInteriorInController(const FWallInteriorData& WallInteriorData) {
-	AfterWallInteriorSelection.ExecuteIfBound(WallInteriorData);
-}
-
-void  UScrollBoxWidget::PassFloorInteriorInController(const FFloorInteriorData& FloorInteriorData) {
-	AfterFloorInteriorSelection.ExecuteIfBound(FloorInteriorData);
-}
-
-void UScrollBoxWidget::PassRoofInteriorInController(const FRoofInteriorData& RoofInteriorData) {
-	AfterRoofInteriorSelection.ExecuteIfBound(RoofInteriorData);
+void UScrollBoxWidget::PassInteriorInController(const FInteriorData& InteriorData) {
+	AfterInteriorSelection.ExecuteIfBound(InteriorData);
 }
 
 void UScrollBoxWidget::PassWallInController(const FWallData& WallData)

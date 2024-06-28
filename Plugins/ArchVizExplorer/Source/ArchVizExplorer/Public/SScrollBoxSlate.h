@@ -23,9 +23,7 @@ DECLARE_DELEGATE_OneParam(FOnWallSelection ,const FWallData&)
 DECLARE_DELEGATE_OneParam(FOnDoorSelection ,const FDoorData&)
 DECLARE_DELEGATE_OneParam(FOnBuildingMaterialSelection ,const FBuildingMaterialData&)
 DECLARE_DELEGATE_OneParam(FOnRoadMaterialSelection ,const FRoadMaterialData&)
-DECLARE_DELEGATE_OneParam(FOnWallInteriorSelection ,const FWallInteriorData&)
-DECLARE_DELEGATE_OneParam(FOnFloorInteriorSelection ,const FFloorInteriorData&)
-DECLARE_DELEGATE_OneParam(FOnRoofInteriorSelection ,const FRoofInteriorData&)
+DECLARE_DELEGATE_OneParam(FOnInteriorSelection ,const FInteriorData&)
 
 UENUM()
 enum class EScrollBoxType : uint8
@@ -65,9 +63,7 @@ public:
 	FOnDoorSelection OnDoorSelection;
 	FOnBuildingMaterialSelection OnBuildingMaterialSelection;
 	FOnRoadMaterialSelection OnRoadMaterialSelection;
-	FOnWallInteriorSelection OnWallInteriorSelection;
-	FOnFloorInteriorSelection OnFloorInteriorSelection;
-	FOnRoofInteriorSelection OnRoofInteriorSelection;
+	FOnInteriorSelection OnInteriorSelection; 
 
 protected:
 	void ScrollBoxSelection();
@@ -76,9 +72,12 @@ protected:
 	void PopulateWallScrollBox();
 	void PopulateBuildingMaterialScrollBox();
 	void PopulateRoadMaterialScrollBox();
-	void PopulateWallInteriorScrollBox();
+
 	void PopulateFloorInteriorScrollBox();
+
 	void PopulateRoofInteriorScrollBox();
+
+	void PopulateWallInterior();
 
 private:
 	UPROPERTY(EditAnywhere , BlueprintReadWrite , Category = "SlateScrollBox" , Meta = (UIMin = 1.0f , ClampMin = 1.0f))

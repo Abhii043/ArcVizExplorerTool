@@ -11,10 +11,7 @@ DECLARE_DELEGATE_OneParam(FAfterWallSelection, const FWallData&)
 DECLARE_DELEGATE_OneParam(FAfterDoorSelection, const FDoorData&)
 DECLARE_DELEGATE_OneParam(FAfterBuildingMaterialSelection, const FBuildingMaterialData&)
 DECLARE_DELEGATE_OneParam(FAfterRoadMaterialSelection, const FRoadMaterialData&)
-DECLARE_DELEGATE_OneParam(FAfterWallInteriorSelection, const FWallInteriorData&)
-DECLARE_DELEGATE_OneParam(FAfterFloorInteriorSelection, const FFloorInteriorData&)
-DECLARE_DELEGATE_OneParam(FAfterRoofInteriorSelection, const FRoofInteriorData&)
-
+DECLARE_DELEGATE_OneParam(FAfterInteriorSelection, const FInteriorData&)
 
 UCLASS()
 class ARCHVIZEXPLORER_API UScrollBoxWidget : public UWidget
@@ -48,9 +45,7 @@ public:
 	FAfterDoorSelection AfterDoorSelection ;
 	FAfterBuildingMaterialSelection AfterBuildingMaterialSelection;
 	FAfterRoadMaterialSelection AfterRoadMaterialSelection;
-	FAfterWallInteriorSelection AfterWallInteriorSelection;
-	FAfterFloorInteriorSelection AfterFloorInteriorSelection;
-	FAfterRoofInteriorSelection AfterRoofInteriorSelection;
+	FAfterInteriorSelection AfterInteriorSelection;
 
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 protected:
@@ -64,11 +59,7 @@ protected:
 	UFUNCTION()
 	void PassRoadMaterialInController(const FRoadMaterialData& RoadMaterialData);
 	UFUNCTION()
-	void PassWallInteriorInController(const FWallInteriorData& WallInteriorData);
-	UFUNCTION()
-	void PassFloorInteriorInController(const FFloorInteriorData& FloorInteriorData);
-	UFUNCTION()
-	void PassRoofInteriorInController(const FRoofInteriorData& RoofInteriorData);
+	void PassInteriorInController(const FInteriorData& InteriorData);
 
 private:
 	TSharedPtr<SScrollBoxSlate> ScrollBoxAsset;

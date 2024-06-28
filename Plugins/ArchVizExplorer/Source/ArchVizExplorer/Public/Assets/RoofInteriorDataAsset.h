@@ -4,18 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "InteriorStruct.h"
 #include "RoofInteriorDataAsset.generated.h"
-
-USTRUCT(BlueprintType)
-struct FRoofInteriorData {
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, category = "WallAsset")
-	UTexture2D* Image;
-
-	UPROPERTY(EditAnywhere, category = "WallAsset")
-	UStaticMesh* InteriorMesh;
-};
 
 UCLASS()
 class ARCHVIZEXPLORER_API URoofInteriorDataAsset : public UDataAsset
@@ -25,5 +15,5 @@ class ARCHVIZEXPLORER_API URoofInteriorDataAsset : public UDataAsset
 	public:
 
 	UPROPERTY(EditAnywhere , category = "RoofInteriorAsset")
-	TArray<FRoofInteriorData> RoofInteriorArr;
+	TArray<FInteriorData> RoofInteriorArr;
 };
