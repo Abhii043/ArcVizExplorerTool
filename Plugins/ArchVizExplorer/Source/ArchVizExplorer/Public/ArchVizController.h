@@ -71,6 +71,13 @@ private:
 	void ConstructionModeHandler(); 	
 	UFUNCTION(BlueprintCallable, category = "ArchVizController")
 	void BindWidgetDelegates();
+	UFUNCTION()
+	void ToggleVisibility();
+	UFUNCTION()
+	void SaveTemplate();
+	UFUNCTION()
+	void LoadTemplate();
+
 
 	//Road Construction Mapping
 
@@ -230,11 +237,11 @@ private:
 	UFUNCTION()
 	void OnGenerateRoofPressed(); 
 	UFUNCTION()
-	void GenerateRoof(); 
+	void GenerateRoofOnMiddleClick();
 	UFUNCTION()
-	void GenerateRoofOnRightClick(); 
+	void GenerateRoofOnLeftClick(); 
 	UFUNCTION()
-	void GenerateRoofOnRightClickCompleted();
+	void GenerateRoofOnLeftClickCompleted();
 	UFUNCTION()
 	void SetRoofConstructionMapping();
 	UFUNCTION()

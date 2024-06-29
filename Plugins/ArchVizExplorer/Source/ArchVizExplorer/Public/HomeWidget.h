@@ -8,6 +8,7 @@
 #include <Components/VerticalBox.h>
 #include <Components/Button.h>
 #include <Components/HorizontalBox.h>
+#include <Components/EditableText.h>
 #include "HomeWidget.generated.h"
 
 /**
@@ -31,4 +32,13 @@ public:
 	UButton* MaterialManagment;
 	UPROPERTY(meta = (BindWidget))
 	UButton* InteriorDesign;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* SaveTemplate;
+	UPROPERTY(meta = (BindWidget))
+	UButton* LoadTemplate;
+	UPROPERTY(meta = (BindWidget))
+	UEditableText* SlotNameTxt;
+	UPROPERTY(meta = (BindWidget))
+	UButton* SaveBtn;
 };

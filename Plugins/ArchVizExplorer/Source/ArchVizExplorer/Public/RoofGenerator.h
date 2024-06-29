@@ -22,6 +22,9 @@ public:
 	UPROPERTY()
 	FVector RoofDimensions;
 
+	UPROPERTY()
+	UMaterialInterface* RoofMaterial;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -31,5 +34,8 @@ public:
 	// Called every frame
 	void GenerateRoof(const FVector& Dimensions);
 	void GenerateCube(const FVector& Dimensions, const FVector& LocationOffset);
+
+	UFUNCTION()
+	void ApplyRoofMaterial(UMaterialInterface* Material);
 
 };

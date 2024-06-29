@@ -27,6 +27,7 @@ void AFloorGenerator::Tick(float DeltaTime)
 
 void AFloorGenerator::GenerateFloor(const FVector& Dimensions)
 {
+	FloorDimensions = Dimensions; 
 	GenerateCube(Dimensions , {0,0,Dimensions.Z/2});
 }
 
@@ -107,4 +108,17 @@ void AFloorGenerator::GenerateCube(const FVector& Dimensions, const FVector& Loc
 
 
 	FloorComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, Colors, Tangents, true);
+}
+
+void AFloorGenerator::ApplyFloorMaterial(UMaterialInterface* Material)
+{
+	FloorMaterial = Material;
+	UMaterialInstanceDynamic* DynamicFloorMaterial = UMaterialInstanceDynamic::Create(Material, this);
+	if (DynamicFloorMaterial) {
+		float TileX = (FloorDimensions.X) / 200.0f;
+		float TileY = (FloorDimensions.Y) / 200.0f;
+		DynamicFloorMaterial->SetScalarParameterValue("TileX", TileX);
+		DynamicFloorMaterial->SetScalarParameterValue("TileY", TileY);
+		FloorComponent->SetMaterial(0, DynamicFloorMaterial);
+	}
 }

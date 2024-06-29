@@ -19,13 +19,16 @@ public:
 	UProceduralMeshComponent* ProceduralMeshComponent;
 
 	UPROPERTY(EditDefaultsOnly,Category = "RoadConstructor")
-	UMaterialInterface* Material;
+	UMaterialInterface* RoadMaterial;
 
 	UPROPERTY()
 	FVector RoadDimensions{};
 
 	UFUNCTION(BlueprintCallable , Category = "RoadConstructor")
-	void GenerateRoad(const FVector& Dimensions , const FVector& LocationOffset);
+	void GenerateRoad(const FVector& Dimensions);
+
+	UFUNCTION()
+	void ApplyMaterialToRoad(UMaterialInterface* Material);
 
 protected:
 	virtual void BeginPlay() override;

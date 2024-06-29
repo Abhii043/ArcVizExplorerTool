@@ -22,6 +22,9 @@ public:
 	UPROPERTY()
 	FVector FloorDimensions;
 
+	UPROPERTY()
+	UMaterialInterface* FloorMaterial;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -31,5 +34,6 @@ public:
 	// Called every frame
 	void GenerateFloor(const FVector& Dimensions);
 	void GenerateCube(const FVector& Dimensions, const FVector& LocationOffset);
+	void ApplyFloorMaterial(UMaterialInterface* Material);
 
 };

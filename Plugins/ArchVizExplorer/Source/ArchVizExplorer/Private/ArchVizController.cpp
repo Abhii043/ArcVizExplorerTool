@@ -2,7 +2,9 @@
 
 
 #include "ArchVizController.h"
-#include <Kismet/KismetMathLibrary.h>
+#include "Kismet/KismetMathLibrary.h"
+#include "ArchVizExplorerSave.h"
+#include "Kismet/GameplayStatics.h"
 
 AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bRoadEditorMode{ false }, bBuildingEditorMode{ false }, bIsWallProjection{ false }, SelectedBuildingComponent{ EBuildingComponentSelection::None }, bIsFloorProjection{ false }
 {
@@ -39,6 +41,9 @@ void AArchVizController::BindWidgetDelegates() {
 		HomeWidget->BuildingConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnBuildingConstructionPressed);
 		HomeWidget->MaterialManagment->OnClicked.AddDynamic(this, &AArchVizController::OnMaterialManagmentPressed);
 		HomeWidget->InteriorDesign->OnClicked.AddDynamic(this, &AArchVizController::OnInteriorDesignPressed);
+		HomeWidget->SaveTemplate->OnClicked.AddDynamic(this, &AArchVizController::ToggleVisibility);
+		HomeWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::LoadTemplate);
+		HomeWidget->SaveBtn->OnClicked.AddDynamic(this, &AArchVizController::SaveTemplate);
 	}
 	if (RoadWidget) {
 		RoadWidget->EditorMode->OnClicked.AddDynamic(this, &AArchVizController::OnRoadEditorModePressed);
@@ -89,6 +94,155 @@ void AArchVizController::BindWidgetDelegates() {
 		InteriorDesignWidget->WallInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
 		InteriorDesignWidget->FloorInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
 		InteriorDesignWidget->RoofInteriorScrollBox->AfterInteriorSelection.BindUFunction(this, "ApplyInterior");
+	}
+}
+
+void AArchVizController::ToggleVisibility(){
+	HomeWidget->SlotNameTxt->SetVisibility(ESlateVisibility::Visible);
+	HomeWidget->SlotNameTxt->SetText(FText::FromString(""));
+	HomeWidget->SaveBtn->SetVisibility(ESlateVisibility::Visible);
+
+}
+
+void AArchVizController::SaveTemplate()
+{
+	FText SlotText = HomeWidget->SlotNameTxt->GetText();
+	if (!SlotText.IsEmpty()) {
+		HomeWidget->SlotNameTxt->SetVisibility(ESlateVisibility::Hidden);
+		HomeWidget->SaveBtn->SetVisibility(ESlateVisibility::Hidden);
+
+		UArchVizExplorerSave* SaveArchVizInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::CreateSaveGameObject(UArchVizExplorerSave::StaticClass()));
+
+		TArray<AActor*> RoadActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARoadConstructor::StaticClass(), RoadActors);
+
+		for (AActor* Actor : RoadActors)
+		{
+			ARoadConstructor* RoadActor = Cast<ARoadConstructor>(Actor);
+			if (RoadActor)
+			{
+				FRoadSaveData RoadData;
+				RoadData.RoadTransform = RoadActor->GetActorTransform();
+				RoadData.RoadMaterial = RoadActor->RoadMaterial;
+				RoadData.RoadDimensions = RoadActor->RoadDimensions;
+
+				SaveArchVizInstance->RoadActorArray.Add(RoadData);
+			}
+		}
+
+		TArray<AActor*> WallActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWallGenerator::StaticClass(), WallActors);
+
+		for (AActor* Actor : WallActors)
+		{
+			AWallGenerator* WallActor = Cast<AWallGenerator>(Actor);
+			if (WallActor)
+			{
+				FWallSaveData WallData;
+				WallData.WallTransform = WallActor->GetActorTransform();
+				WallData.WallMaterial = WallActor->WallMaterial_;
+				WallData.NoOfSegments = WallActor->NoOfSegments;
+				WallData.WallGeneratorActorMap = WallActor->WallGeneratorActorMap;
+
+				SaveArchVizInstance->WallActorArray.Add(WallData);
+			}
+		}
+
+		TArray<AActor*> FloorActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorGenerator::StaticClass(), FloorActors);
+
+		for (AActor* Actor : FloorActors)
+		{
+			AFloorGenerator* FloorActor = Cast<AFloorGenerator>(Actor);
+			if (FloorActor)
+			{
+				FFloorSaveData FloorData;
+				FloorData.FloorTransform = FloorActor->GetActorTransform();
+				FloorData.FloorMaterial =FloorActor->FloorMaterial;
+				FloorData.FloorDimensions = FloorActor->FloorDimensions;
+
+				SaveArchVizInstance->FloorActorArray.Add(FloorData);
+			}
+		}
+
+		TArray<AActor*> RoofActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARoofGenerator::StaticClass(), RoofActors);
+
+		for (AActor* Actor : RoofActors)
+		{
+			ARoofGenerator* RoofActor = Cast<ARoofGenerator>(Actor);
+			if (RoofActor)
+			{
+				FRoofSaveData RoofData;
+				RoofData.RoofTransform = RoofActor->GetActorTransform();
+				RoofData.RoofMaterial = RoofActor->RoofMaterial;
+				RoofData.RoofDimensions = RoofActor->RoofDimensions;
+
+				SaveArchVizInstance->RoofActorArray.Add(RoofData);
+			}
+		}
+
+		TArray<AActor*> InteriorActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AInteriorDesignActor::StaticClass(), InteriorActors);
+
+		for (AActor* Actor : InteriorActors)
+		{
+			AInteriorDesignActor* InteriorActor = Cast<AInteriorDesignActor>(Actor);
+			if (InteriorActor)
+			{
+				FInteriorSaveData InteriorData;
+				InteriorData.InteriorTransform = InteriorActor->GetActorTransform();
+				InteriorData.InteriorIndex = InteriorActor->IdentityIndex;
+				InteriorData.InteriorMesh = InteriorActor->InteriorMesh;
+
+				SaveArchVizInstance->InteriorActorArray.Add(InteriorData);
+			}
+		}
+
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, "Saved");
+
+		UGameplayStatics::SaveGameToSlot(SaveArchVizInstance, SlotText.ToString(), 0);
+	}
+
+}
+
+void AArchVizController::LoadTemplate()
+{
+	UArchVizExplorerSave* LoadGameInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::LoadGameFromSlot("All", 0));
+
+	if (LoadGameInstance)
+	{
+		for (const FRoadSaveData& RoadData : LoadGameInstance->RoadActorArray)
+		{
+			ARoadConstructor* RoadActor = GetWorld()->SpawnActor<ARoadConstructor>(RoadConstructorClassRef, RoadData.RoadTransform);
+			RoadActor->ApplyMaterialToRoad(RoadData.RoadMaterial);
+			RoadActor->GenerateRoad(RoadData.RoadDimensions);
+		}
+		for (const FWallSaveData& WallData : LoadGameInstance->WallActorArray)
+		{
+			AWallGenerator* WallActor = GetWorld()->SpawnActor<AWallGenerator>(WallGeneratorActorClassRef, WallData.WallTransform);
+			WallActor->WallGeneratorActorMap = WallData.WallGeneratorActorMap;
+			WallActor->GenerateWall(WallData.NoOfSegments);
+			WallActor->ApplyMaterialToWallActor(WallData.WallMaterial);
+		}
+		for (const FFloorSaveData& FloorData : LoadGameInstance->FloorActorArray)
+		{
+			AFloorGenerator* FloorActor = GetWorld()->SpawnActor<AFloorGenerator>(FloorGeneratorActorClassRef, FloorData.FloorTransform);
+			FloorActor->GenerateFloor(FloorData.FloorDimensions);
+			FloorActor->ApplyFloorMaterial(FloorData.FloorMaterial);
+		}
+		for (const FRoofSaveData& RoofData : LoadGameInstance->RoofActorArray)
+		{
+			ARoofGenerator* RoofActor = GetWorld()->SpawnActor<ARoofGenerator>(RoofGeneratorActorClassRef, RoofData.RoofTransform);
+			RoofActor->GenerateRoof(RoofData.RoofDimensions);
+			RoofActor->ApplyRoofMaterial(RoofData.RoofMaterial);
+		}
+		for (const FInteriorSaveData& InteriorData : LoadGameInstance->InteriorActorArray) {
+			AInteriorDesignActor* InteriorGeneratorActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), InteriorData.InteriorTransform);
+			InteriorGeneratorActor->IdentityIndex = InteriorData.InteriorIndex;
+			InteriorGeneratorActor->InteriorMesh = InteriorData.InteriorMesh;
+			InteriorGeneratorActor->SetInteriorMesh(InteriorGeneratorActor->InteriorMesh);
+		}
 	}
 }
 
@@ -293,7 +447,7 @@ void AArchVizController::PreviewWallActor()
 
 		if (WallGeneratorActor) {
 			WallGeneratorActor->SetActorLocation(ResultedLocation);
-			if (WallGeneratorActor->WallStaticMesh) { SnapWallActor(WallGeneratorActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y / 2); }
+			if (WallGeneratorActor->WallStaticMesh) { SnapWallActor(WallGeneratorActor->WallStaticMesh->GetBounds().GetBox().GetSize().Y / 2.0); }
 		}
 	}
 }
@@ -559,10 +713,17 @@ void AArchVizController::SetFloorConstructionMapping()
 
 void AArchVizController::GenerateFloor() {
 
-	GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, FloorGeneratorActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams);
 
 	if (!FloorGeneratorActor) {
 		FloorStartLocation = HitResult.Location;
+		FloorStartLocation.X = FMath::RoundToFloat(FloorStartLocation.X / 12.5)* 12.5;
+		FloorStartLocation.Y = FMath::RoundToFloat(FloorStartLocation.Y / 12.5)* 12.5;
 
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -642,7 +803,7 @@ void AArchVizController::OnGenerateRoofPressed()
 	AddBuildingComponentsMapping();
 }
 
-void AArchVizController::GenerateRoof()
+void AArchVizController::GenerateRoofOnMiddleClick()
 {
 	GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
 
@@ -726,9 +887,14 @@ void AArchVizController::GenerateRoof()
 	RoofGeneratorActor = nullptr;
 }
 
-void AArchVizController::GenerateRoofOnRightClick()
+void AArchVizController::GenerateRoofOnLeftClick()
 {
-	GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, RoofGeneratorActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams);
 
 	if (!RoofGeneratorActor) {
 		if (AWallGenerator * WallActor = Cast<AWallGenerator>(HitResult.GetActor())) {
@@ -736,6 +902,8 @@ void AArchVizController::GenerateRoofOnRightClick()
 			RoofInZ = WallActor->GetActorLocation().Z + WallActor->WallHeight;
 
 			RoofStartLocation = HitResult.Location;
+			RoofStartLocation.X = FMath::RoundToFloat(RoofStartLocation.X / 12.5) * 12.5;
+			RoofStartLocation.Y = FMath::RoundToFloat(RoofStartLocation.Y / 12.5) * 12.5;
 			RoofStartLocation.Z = RoofInZ;
 
 			FActorSpawnParameters Params;
@@ -763,7 +931,7 @@ void AArchVizController::GenerateRoofOnRightClick()
 	}
 }
 
-void AArchVizController::GenerateRoofOnRightClickCompleted()
+void AArchVizController::GenerateRoofOnLeftClickCompleted()
 {
 	RoofGeneratorActor = nullptr;
 }
@@ -780,13 +948,13 @@ void AArchVizController::SetRoofConstructionMapping()
 	GenerateRoofWithRightClickAction = NewObject<UInputAction>(this);
 	GenerateRoofWithRightClickAction->ValueType = EInputActionValueType::Boolean;
 
-	RoofMapping->MapKey(GenerateRoofAction, EKeys::LeftMouseButton);
-	RoofMapping->MapKey(GenerateRoofWithRightClickAction, EKeys::RightMouseButton);
+	RoofMapping->MapKey(GenerateRoofAction, EKeys::MiddleMouseButton);
+	RoofMapping->MapKey(GenerateRoofWithRightClickAction, EKeys::LeftMouseButton);
 
 	if (EIC) {
-		EIC->BindAction(GenerateRoofAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoof);
-		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Triggered, this, &AArchVizController::GenerateRoofOnRightClick);
-		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoofOnRightClickCompleted);
+		EIC->BindAction(GenerateRoofAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoofOnMiddleClick);
+		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Triggered, this, &AArchVizController::GenerateRoofOnLeftClick);
+		EIC->BindAction(GenerateRoofWithRightClickAction, ETriggerEvent::Completed, this, &AArchVizController::GenerateRoofOnLeftClickCompleted);
 	}
 }
 
@@ -1510,7 +1678,7 @@ void AArchVizController::GenerateRoad()
 	}
 
 	if (RoadConstructor) {
-		RoadConstructor->GenerateRoad(RoadDimensions, FVector(0, 0, RoadDimensions.Z / 2));
+		RoadConstructor->GenerateRoad(RoadDimensions);
 	}
 }
 
@@ -1725,14 +1893,7 @@ void AArchVizController::SelectActorOnClick()
 
 void AArchVizController::ApplyRoadMaterial(const FRoadMaterialData& RoadMaterialData) {
 	if(RoadConstructor) {
-		UMaterialInstanceDynamic* DynamicRoadMaterial = UMaterialInstanceDynamic::Create(RoadMaterialData.Material, this);
-		if (DynamicRoadMaterial) {
-			float TileX = (RoadConstructor->RoadDimensions.X) / 200.0f;
-			float TileY = 1;
-			DynamicRoadMaterial->SetScalarParameterValue("TileX", TileX);
-			DynamicRoadMaterial->SetScalarParameterValue("TileY", TileY);
-			RoadConstructor->ProceduralMeshComponent->SetMaterial(0, DynamicRoadMaterial);
-		}
+		RoadConstructor->ApplyMaterialToRoad(RoadMaterialData.Material);
 	}
 }
 
@@ -1741,24 +1902,10 @@ void AArchVizController::ApplyBuildingMaterial(const FBuildingMaterialData& Buil
 		WallGeneratorActor->ApplyMaterialToWallActor(BuildingMaterialData.Material);
 	}
 	else if (FloorGeneratorActor) {
-		UMaterialInstanceDynamic* DynamicFloorMaterial = UMaterialInstanceDynamic::Create(BuildingMaterialData.Material, this);
-		if (DynamicFloorMaterial) {
-			float TileX = (FloorGeneratorActor->FloorDimensions.X) / 200.0f;
-			float TileY = (FloorGeneratorActor->FloorDimensions.Y) / 200.0f;
-			DynamicFloorMaterial->SetScalarParameterValue("TileX", TileX);
-			DynamicFloorMaterial->SetScalarParameterValue("TileY", TileY);
-			FloorGeneratorActor->FloorComponent->SetMaterial(0, DynamicFloorMaterial);
-		}
+		FloorGeneratorActor->ApplyFloorMaterial(BuildingMaterialData.Material);
 	}
 	else if (RoofGeneratorActor) {
-		UMaterialInstanceDynamic* DynamicRoofMaterial = UMaterialInstanceDynamic::Create(BuildingMaterialData.Material, this);
-		if (DynamicRoofMaterial) {
-			float TileX = (RoofGeneratorActor->RoofDimensions.X) / 200.0f;
-			float TileY = (RoofGeneratorActor->RoofDimensions.Y) / 200.0f;
-			DynamicRoofMaterial->SetScalarParameterValue("TileX", TileX);
-			DynamicRoofMaterial->SetScalarParameterValue("TileY", TileY);
-			RoofGeneratorActor->RoofComponent->SetMaterial(0, DynamicRoofMaterial);
-		}
+		RoofGeneratorActor->ApplyRoofMaterial(BuildingMaterialData.Material);
 	}
 }
 
@@ -1795,10 +1942,6 @@ void AArchVizController::OnInteriorDesignPressed()
 	}
 
 	ConstructionModeHandler();
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 }
 
 void AArchVizController::SetInteriorDesignMapping()
@@ -1833,27 +1976,46 @@ void AArchVizController::PlaceInteriorOnClick()
 	FVector CursorWorldDirection;
 
 	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
-	GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams);
-
-	if (InteriorDesignActor->IdentityIndex == 0) {
-		if (Cast<AWallGenerator>(HitResult.GetActor())) {
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams)) {
+		if (InteriorDesignActor) {
+			if (InteriorDesignActor->IdentityIndex == 0) {
+				if (Cast<AWallGenerator>(HitResult.GetActor())) {
+					FActorSpawnParameters SpawnParams;
+					SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+					InteriorDesignActor = nullptr;
+				}
+			}
+			else if (InteriorDesignActor->IdentityIndex == 1) {
+				if (AFloorGenerator* FloorActor = Cast<AFloorGenerator>(HitResult.GetActor())) {
+					if (FVector(0, 0, (FloorActor->FloorDimensions.Z + FloorActor->GetActorLocation().Z)).Equals(FVector(0, 0, HitResult.Location.Z))) {
+						FActorSpawnParameters SpawnParams;
+						SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+						InteriorDesignActor = nullptr;
+					}
+				}
+			}
+			else if (InteriorDesignActor->IdentityIndex == 2) {
+				if (ARoofGenerator* RoofActor = Cast<ARoofGenerator>(HitResult.GetActor())) {
+					if (FVector(0, 0, RoofActor->GetActorLocation().Z).Equals(FVector(0,0,HitResult.Location.Z))) {
+						FActorSpawnParameters SpawnParams;
+						SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+						InteriorDesignActor = nullptr;
+					}
+				}
+			}
 		}
-	}
-	else if (InteriorDesignActor->IdentityIndex == 1) {
-		if (Cast<AFloorGenerator>(HitResult.GetActor())) {
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
-		}
-	}
-	else if (InteriorDesignActor->IdentityIndex == 2) {
-		if (Cast<ARoofGenerator>(HitResult.GetActor())) {
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), LastLocation, FRotator::ZeroRotator, SpawnParams);
+		else {
+			if (Cast<AInteriorDesignActor>(HitResult.GetActor())) {
+				if (InteriorDesignActor) {
+					InteriorDesignActor->Destroy();
+					InteriorDesignActor = nullptr;
+					InteriorDesignActor = Cast<AInteriorDesignActor>(HitResult.GetActor());
+				}
+				else {
+					InteriorDesignActor = nullptr;
+					InteriorDesignActor = Cast<AInteriorDesignActor>(HitResult.GetActor());
+				}
+			}
 		}
 	}
 }
@@ -1867,6 +2029,11 @@ void AArchVizController::RotateInterior()
 
 void AArchVizController::ApplyInterior(const FInteriorData& InteriorData)
 {
+	if (!InteriorDesignActor) {
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		InteriorDesignActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+	}
 	if (InteriorDesignActor) {
 		InteriorDesignActor->IdentityIndex = InteriorData.IdentityIndex;
 		if(InteriorData.InteriorMesh){InteriorDesignActor->SetInteriorMesh(InteriorData.InteriorMesh);}
@@ -1887,20 +2054,24 @@ void AArchVizController::PreviewWallInteriorActor()
 				FVector WallDirection = WallActor->GetActorForwardVector(); // 1,0,0
 				FVector PreviewInteriorLocation{};
 				if (InteriorDesignActor->InteriorMesh) {
+					InteriorDesignActor->SetActorRotation(FRotator(0, 0, 0));
 					if ((FindAngleBetweenVectors({ 1, 0, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ -1, 0, 0 }, WallDirection) == 0)) { // X || -X
 						if (HitResult.Location.Y > WallActor->GetActorLocation().Y) {
 							PreviewInteriorLocation = HitResult.Location + FVector{ 0, InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0 };
 						}
 						else {
 							PreviewInteriorLocation = HitResult.Location + FVector{ 0, -InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0 };
+							InteriorDesignActor->SetActorRotation(FRotator(0,-180,0));
 						}
 					}
 					else if ((FindAngleBetweenVectors({ 0, 1, 0 }, WallDirection) == 0) || (FindAngleBetweenVectors({ 0, -1, 0 }, WallDirection) == 0)) {
 						if (HitResult.Location.X > WallActor->GetActorLocation().X) {
 							PreviewInteriorLocation = HitResult.Location + FVector{ InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0, 0 };
+							InteriorDesignActor->SetActorRotation(FRotator(0, -90, 0));
 						}
 						else {
 							PreviewInteriorLocation = HitResult.Location + FVector{ -InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Y / 2, 0, 0 };
+							InteriorDesignActor->SetActorRotation(FRotator(0, 90, 0));
 						}
 					}
 					InteriorDesignActor->SetActorLocation(PreviewInteriorLocation);
@@ -1920,8 +2091,11 @@ void AArchVizController::PreviewFloorInteriorActor()
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
 	{
 		if (AFloorGenerator* FloorActor = Cast<AFloorGenerator>(HitResult.GetActor())) {
-			if (InteriorDesignActor) {
-				InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor , HitResult.Location));
+			if(FVector(0,0,(FloorActor->FloorDimensions.Z + FloorActor->GetActorLocation().Z)).Equals(FVector(0,0,HitResult.Location.Z)))
+			{
+				if (InteriorDesignActor) {
+					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location));
+				}
 			}
 		}
 	}
@@ -1929,6 +2103,22 @@ void AArchVizController::PreviewFloorInteriorActor()
 
 void AArchVizController::PreviewRoofInteriorActor()
 {
+	FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true, InteriorDesignActor);
+	FVector CursorWorldLocation;
+	FVector CursorWorldDirection;
+
+	DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
+	{
+		if (ARoofGenerator* RoofActor = Cast<ARoofGenerator>(HitResult.GetActor())) {
+			if(FVector(0,0,RoofActor->GetActorLocation().Z).Equals(FVector(0,0,HitResult.Location.Z)))
+			{
+				if (InteriorDesignActor) {
+					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location));
+				}
+			}
+		}
+	}
 }
 
 FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorActor , FVector Location)
@@ -1946,3 +2136,500 @@ FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorAct
 	}
 	return Location;
 }
+
+
+
+
+
+//void USaveAndLoadManager::SaveSlotMetaData(const FString & SlotName)
+//{
+//	UArchVizSave* MetadataInstance = Cast<UArchVizSave>(UGameplayStatics::LoadGameFromSlot("Metadata", 0));
+//
+//	if (!MetadataInstance)
+//	{
+//		MetadataInstance = Cast<UArchVizSave>(UGameplayStatics::CreateSaveGameObject(UArchVizSave::StaticClass()));
+//	}
+//	MetadataInstance->SaveMetaDataArray.Add(SlotName);
+//	UGameplayStatics::SaveGameToSlot(MetadataInstance, "Metadata", 0);
+//}
+//
+//void USaveAndLoadManager::DeleteSlotMetaData(const FString& SlotInfo)
+//
+//{
+//
+//	UArchVizSave* MetadataInstance = Cast<UArchVizSave>(UGameplayStatics::LoadGameFromSlot("Metadata", 0));
+//
+//	if (!MetadataInstance)
+//
+//	{
+//
+//		return;
+//
+//	}
+//
+//
+//
+//	MetadataInstance->SaveMetaDataArray.Remove(SlotInfo);
+//
+//	SlotsList = MetadataInstance->SaveMetaDataArray;
+//
+//	UGameplayStatics::SaveGameToSlot(MetadataInstance, "Metadata", 0);
+//
+//}
+//
+//TArray<FString> USaveAndLoadManager::GetSaveSlots()
+//
+//{
+//
+//	UArchVizSave* MetadataInstance = Cast<UArchVizSave>(UGameplayStatics::LoadGameFromSlot("Metadata", 0));
+//
+//	if (MetadataInstance)
+//
+//	{
+//
+//		return MetadataInstance->SaveMetaDataArray;
+//
+//	}
+//
+//	return TArray<FString>();
+//
+//}
+//
+//void USaveAndLoadManager::SaveGame(const FString& SlotName)
+//
+//{
+//
+//	UArchVizSave* SaveGameInstance = Cast<UArchVizSave>(UGameplayStatics::CreateSaveGameObject(UArchVizSave::StaticClass()));
+//
+//	for (TActorIterator<ARoadSplineActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		ARoadSplineActor* RoadActor = *It;
+//
+//		FRoad RoadData;
+//
+//		RoadData.ID = RoadActor->GetId();
+//
+//		RoadData.Transform = RoadActor->GetActorTransform();
+//
+//		RoadData.SplinePoints = RoadActor->GetSplinePoints();
+//
+//		RoadData.Type = RoadActor->GetTypeOfRoad();
+//
+//		RoadData.Width = RoadActor->GetWidth();
+//
+//		RoadData.Material = RoadActor->GetMaterial();
+//
+//		RoadData.ParentActorId = RoadActor->GetAttachParentActor() ? Cast<AArchActor>(RoadActor->GetAttachParentActor())->GetId() : -1;
+//
+//		SaveGameInstance->RoadActorArray.Add(RoadData);
+//
+//	}
+//
+//
+//	for (TActorIterator<AWallActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		AWallActor* WallActor = *It;
+//
+//		FWall WallData;
+//
+//		WallData.ID = WallActor->GetId();
+//
+//		WallData.Transform = WallActor->GetActorTransform();
+//
+//		WallData.NumberOfWallSegments = WallActor->GetNumberOfWallSegments();
+//
+//		WallData.Material = WallActor->GetMaterial();
+//
+//
+//		WallData.ParentActorId = WallActor->GetAttachParentActor() ? Cast<AArchActor>(WallActor->GetAttachParentActor())->GetId() : -1;
+//
+//		SaveGameInstance->WallActorArray.Add(WallData);
+//
+//	}
+//
+//	for (TActorIterator<AFloorActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		AFloorActor* FloorActor = *It;
+//
+//		FFloor FloorData;
+//
+//		FloorData.ID = FloorActor->GetId();
+//
+//		FloorData.Transform = FloorActor->GetActorTransform();
+//
+//		FloorData.Material = FloorActor->GetMaterial();
+//
+//		FloorData.Dimensions = FloorActor->GetDimensions();
+//
+//		FloorData.ParentActorId = FloorActor->GetAttachParentActor() ? Cast<AArchActor>(FloorActor->GetAttachParentActor())->GetId() : -1;
+//
+//		SaveGameInstance->FloorActorArray.Add(FloorData);
+//
+//	}
+//
+//
+//	for (TActorIterator<ADoorActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		ADoorActor* DoorActor = *It;
+//
+//		FDoor DoorData;
+//
+//		DoorData.ID = DoorActor->GetId();
+//
+//		DoorData.Transform = DoorActor->GetActorTransform();
+//
+//		DoorData.DoorMaterial = DoorActor->GetDoorMaterial();
+//
+//		DoorData.FrameMaterial = DoorActor->GetDoorFrameMaterial();
+//
+//		DoorData.bIsOpen = DoorActor->IsDoorOpen();
+//
+//		DoorData.ParentComponentIndex = DoorActor->ParentWallComponentIndex;
+//
+//		DoorData.ParentActorId = DoorActor->GetAttachParentActor() ? Cast<AArchActor>(DoorActor->GetAttachParentActor())->GetId() : -1;
+//
+//		SaveGameInstance->DoorActorArray.Add(DoorData);
+//
+//	}
+//
+//
+//	for (TActorIterator<AInteriorActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		AInteriorActor* InteriorActor = *It;
+//
+//		FInterior InteriorData;
+//
+//		InteriorData.ID = InteriorActor->GetId();
+//
+//		InteriorData.Transform = InteriorActor->GetActorTransform();
+//
+//		InteriorData.StaticMesh = InteriorActor->GetCurrentStaticMesh();
+//
+//		InteriorData.ParentActorId = InteriorActor->GetAttachParentActor() ? Cast<AArchActor>(InteriorActor->GetAttachParentActor())->GetId() : -1;
+//
+//		SaveGameInstance->InteriorActorArray.Add(InteriorData);
+//
+//	}
+//
+//
+//	for (TActorIterator<AWindowActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		AWindowActor* WindowActor = *It;
+//
+//		FWindow WindowData;
+//
+//		WindowData.ID = WindowActor->GetId();
+//
+//		WindowData.Transform = WindowActor->GetActorTransform();
+//
+//		WindowData.ParentActorId = WindowActor->GetAttachParentActor() ? Cast<AArchActor>(WindowActor->GetAttachParentActor())->GetId() : -1;
+//
+//		WindowData.WindowMaterial = WindowActor->GetMaterial();
+//
+//		WindowData.ParentComponentIndex = WindowActor->ParentWallComponentIndex;
+//
+//		SaveGameInstance->WindowActorArray.Add(WindowData);
+//
+//	}
+//
+//
+//	UGameplayStatics::SaveGameToSlot(SaveGameInstance, SlotName, 0);
+//
+//}
+//
+//void USaveAndLoadManager::LoadGame(const FString& SlotName)
+//
+//{
+//
+//	UArchVizSave* LoadGameInstance = Cast<UArchVizSave>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
+//
+//
+//	if (LoadGameInstance)
+//
+//	{
+//
+//		ClearWholeWorld();
+//
+//
+//		TMap<int32, AActor*> IdToActorMap;
+//
+//		TMap<AActor*, int32> ActorToParentActorIdMap;
+//
+//		for (const FRoad& RoadData : LoadGameInstance->RoadActorArray)
+//
+//		{
+//
+//			ARoadSplineActor* RoadActor = GetWorld()->SpawnActor<ARoadSplineActor>(RoadSplineActorClass, RoadData.Transform);
+//
+//			RoadActor->SetActorTransform(RoadData.Transform);
+//
+//			RoadActor->SetSplinePoints(RoadData.SplinePoints);
+//
+//			RoadActor->SetTypeOfRoad(RoadData.Type);
+//
+//			RoadActor->SetWidth(RoadData.Width);
+//
+//			RoadActor->SetMaterial(RoadData.Material);
+//
+//			RoadActor->SynchronizePropertyPanel();
+//
+//			RoadActor->UpdateRoad();
+//
+//			RoadActor->UnHighLightBorder();
+//
+//			IdToActorMap.Add(RoadData.ID, RoadActor);
+//
+//			if (RoadData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(RoadActor, RoadData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//
+//		for (const FWall& WallData : LoadGameInstance->WallActorArray)
+//
+//		{
+//
+//			AWallActor* WallActor = GetWorld()->SpawnActor<AWallActor>(WallActorClass, WallData.Transform);
+//
+//			WallActor->SetActorTransform(WallData.Transform);
+//
+//			WallActor->SetNumberOfWallSegments(WallData.NumberOfWallSegments);
+//
+//			WallActor->SetMaterial(WallData.Material);
+//
+//			WallActor->UpdateWall();
+//
+//			WallActor->SynchronizePropertyPanel();
+//
+//			WallActor->UnHighLightBorder();
+//
+//			IdToActorMap.Add(WallData.ID, WallActor);
+//
+//			if (WallData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(WallActor, WallData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//		for (const FFloor& FloorData : LoadGameInstance->FloorActorArray)
+//
+//		{
+//
+//			AFloorActor* FloorActor = GetWorld()->SpawnActor<AFloorActor>(FloorActorClass, FloorData.Transform);
+//
+//			FloorActor->SetActorTransform(FloorData.Transform);
+//
+//			FloorActor->SetDimensions(FloorData.Dimensions);
+//
+//			FloorActor->SetMaterial(FloorData.Material);
+//
+//			FloorActor->SynchronizePropertyPanel();
+//
+//			FloorActor->GenerateFloor();
+//
+//			IdToActorMap.Add(FloorData.ID, FloorActor);
+//
+//			if (FloorData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(FloorActor, FloorData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//
+//		for (const FDoor& DoorData : LoadGameInstance->DoorActorArray)
+//
+//		{
+//
+//			ADoorActor* DoorActor = GetWorld()->SpawnActor<ADoorActor>(DoorActorClass, DoorData.Transform);
+//
+//			DoorActor->SetActorTransform(DoorData.Transform);
+//
+//			DoorActor->SetDoorMaterial(DoorData.DoorMaterial);
+//
+//			DoorActor->SetDoorFrameMaterial(DoorData.FrameMaterial);
+//
+//			DoorActor->ParentWallComponentIndex = DoorData.ParentComponentIndex;
+//
+//			DoorData.bIsOpen ? DoorActor->OpenDoor() : DoorActor->CloseDoor();
+//
+//			DoorActor->SynchronizePropertyPanel();
+//
+//			IdToActorMap.Add(DoorData.ID, DoorActor);
+//
+//			if (DoorData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(DoorActor, DoorData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//
+//		for (const FInterior& InteriorData : LoadGameInstance->InteriorActorArray)
+//
+//		{
+//
+//			AInteriorActor* InteriorActor = GetWorld()->SpawnActor<AInteriorActor>(InteriorActorClass, InteriorData.Transform);
+//
+//			InteriorActor->SetActorTransform(InteriorData.Transform);
+//
+//			InteriorActor->SetStaticMesh(InteriorData.StaticMesh);
+//
+//			IdToActorMap.Add(InteriorData.ID, InteriorActor);
+//
+//			if (InteriorData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(InteriorActor, InteriorData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//
+//		for (const FWindow& WindowData : LoadGameInstance->WindowActorArray)
+//
+//		{
+//
+//			AWindowActor* WindowActor = GetWorld()->SpawnActor<AWindowActor>(WindowActorClass, WindowData.Transform);
+//
+//			WindowActor->SetActorTransform(WindowData.Transform);
+//
+//			IdToActorMap.Add(WindowData.ID, WindowActor);
+//
+//			if (WindowData.ParentActorId != -1)
+//
+//			{
+//
+//				ActorToParentActorIdMap.Add(WindowActor, WindowData.ParentActorId);
+//
+//			}
+//
+//		}
+//
+//
+//		for (auto& [Actor, ParentActorId] : ActorToParentActorIdMap)
+//
+//		{
+//
+//			if (auto ParentActorPtr = IdToActorMap.Find(ParentActorId))
+//
+//			{
+//
+//				if (auto ParentActor = *ParentActorPtr; IsValid(ParentActor))
+//
+//				{
+//
+//					if (Actor->IsA(ADoorActor::StaticClass()))
+//
+//					{
+//
+//						if (auto ParentWall = Cast<AWallActor>(ParentActor); IsValid(ParentWall))
+//
+//						{
+//
+//							auto Door = Cast<ADoorActor>(Actor);
+//
+//							ParentWall->AddDoorAtIndex(Door->ParentWallComponentIndex, Door);
+//
+//							ParentWall->UpdateWall();
+//
+//							ParentWall->UnHighLightBorder();
+//
+//						}
+//
+//					}
+//
+//					else if (Actor->IsA(AWindowActor::StaticClass()))
+//
+//					{
+//
+//						if (auto ParentWall = Cast<AWallActor>(ParentActor); IsValid(ParentWall))
+//
+//						{
+//
+//							auto Window = Cast<AWindowActor>(Actor);
+//
+//							if (IsValid(Window))
+//
+//							{
+//
+//								ParentWall->AttachWindowAtIndex(Window->ParentWallComponentIndex, Window);
+//
+//								ParentWall->UpdateWall();
+//
+//								ParentWall->UnHighLightBorder();
+//
+//							}
+//
+//						}
+//
+//					}
+//
+//					else
+//
+//					{
+//
+//						Actor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform);
+//
+//					}
+//
+//				}
+//
+//			}
+//
+//		}
+//
+//	}
+//
+//}
+//
+//void USaveAndLoadManager::ClearWholeWorld()
+//
+//{
+//
+//	for (TActorIterator<AArchActor> It(GetWorld()); It; ++It)
+//
+//	{
+//
+//		AArchActor* ArchActor = *It;
+//
+//		if (IsValid(ArchActor))
+//
+//		{
+//
+//			ArchActor->Destroy();
+//
+//		}
+//
+//	}
+//
+//}

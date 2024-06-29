@@ -33,8 +33,10 @@ void AWallGenerator::DestroyWall()
 
 	if (!WallGeneratorActorMap.IsEmpty()) {
 		for (auto& MapComponent : WallGeneratorActorMap) {
-			MapComponent.Value.ProceduralMesh->DestroyComponent();
-			MapComponent.Value.ProceduralMesh = nullptr;
+			if(MapComponent.Value.ProceduralMesh){
+				MapComponent.Value.ProceduralMesh->DestroyComponent();
+				MapComponent.Value.ProceduralMesh = nullptr;
+			}
 		}
 	}
 }
@@ -94,8 +96,12 @@ void AWallGenerator::SetDoorsAndPRoceduralMesh(const int32& Segments)
 
 void AWallGenerator::GenerateWall(const int32& SegmentsNo)
 {
-	DestroyWall();
+	NoOfSegments = SegmentsNo;
+	if(ProceduralMeshMaterial){
+		WallMaterial_ = ProceduralMeshMaterial;
+	}
 
+	DestroyWall();
 	CheckReducedSegments(SegmentsNo);
 
 	if(WallStaticMesh){WallHeight = WallStaticMesh->GetBounds().GetBox().GetSize().Z;}
@@ -199,11 +205,12 @@ void AWallGenerator::GenerateCube(const FVector& Dimensions, const FVector& Loca
 
 	CubeComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, Colors, Tangents, true);
 	CubeComponent->SetMaterial(0,ProceduralMeshMaterial);
-	
 }
 
 void AWallGenerator::ApplyMaterialToWallActor(UMaterialInterface* WallMaterial)
 {
+	WallMaterial_ = WallMaterial;
+
 	UMaterialInstanceDynamic* DynamicWallMaterial1 = UMaterialInstanceDynamic::Create(WallMaterial, this);
 	UMaterialInstanceDynamic* DynamicWallMaterial2 = UMaterialInstanceDynamic::Create(WallMaterial, this);
 	if (DynamicWallMaterial1 && DynamicWallMaterial2) {

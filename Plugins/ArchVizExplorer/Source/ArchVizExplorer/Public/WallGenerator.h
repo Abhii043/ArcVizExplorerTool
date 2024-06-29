@@ -48,6 +48,10 @@ public:
 	void ApplyMaterialToWallActor(UMaterialInterface* WallMaterial);
 	UPROPERTY()
 	TArray<int32> Indexs;
+	UPROPERTY()
+	int32 NoOfSegments{};
+	UPROPERTY()
+	UMaterialInterface* WallMaterial_{};
 
 protected:
 	virtual void BeginPlay() override;
