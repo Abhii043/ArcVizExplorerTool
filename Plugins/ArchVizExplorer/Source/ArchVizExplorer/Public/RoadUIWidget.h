@@ -24,7 +24,10 @@ public:
 	UVerticalBox* OutsideBox;
 
 	UPROPERTY(meta = (BindWidget))
-	UBorder* OutlineBorder;
+	UBorder* OutlineBorder;	
+	
+	UPROPERTY(meta = (BindWidget))
+	UBorder* RoadEditor;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* EditorMode; 

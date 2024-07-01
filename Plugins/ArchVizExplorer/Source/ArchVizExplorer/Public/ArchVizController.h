@@ -293,6 +293,8 @@ private:
 	UInputAction* SelectAssetAction;
 	UPROPERTY()
 	UStaticMeshComponent* DoorHighlightComponent;
+	UPROPERTY()
+	UInputAction* RotateWallInEditorAction;
 
 	UFUNCTION()
 	void OnBuildingEditorModePressed();

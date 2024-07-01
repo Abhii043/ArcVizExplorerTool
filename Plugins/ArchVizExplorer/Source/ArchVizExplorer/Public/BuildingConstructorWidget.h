@@ -46,6 +46,8 @@ public:
 	UScrollBoxWidget* DoorScrollBox;
 
 	UPROPERTY(meta = (BindWidget))
+	UBorder* WallEditor;
+	UPROPERTY(meta = (BindWidget))
 	UBorder* WallDestroyer; 
 	UPROPERTY(meta = (BindWidget))
 	UBorder* WallLocationBorder; 
@@ -57,16 +59,18 @@ public:
 	USpinBox* Wall_X;
 	UPROPERTY(meta = (BindWidget))
 	USpinBox* Wall_Y;
+	UPROPERTY(meta = (BindWidget))
+	UButton* WallDestroy;
 
 	UPROPERTY(meta = (BindWidget))
 	UBorder* DoorDestroyer; 
 	UPROPERTY(meta = (BindWidget))
 	UBorder* Pop_Up;
 	UPROPERTY(meta = (BindWidget))
-	UButton* WallDestroy; 
-	UPROPERTY(meta = (BindWidget))
 	UButton* DoorDestroy; 
 
+	UPROPERTY(meta = (BindWidget))
+	UBorder* FloorEditor;
 	UPROPERTY(meta = (BindWidget))
 	UBorder* FloorDimensionsBorder;
 	UPROPERTY(meta = (BindWidget))
@@ -88,6 +92,8 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UButton* FloorDestroy;
 
+	UPROPERTY(meta = (BindWidget))
+	UBorder* RoofEditor;
 	UPROPERTY(meta = (BindWidget))
 	UBorder* RoofDimensionsBorder;
 	UPROPERTY(meta = (BindWidget))
