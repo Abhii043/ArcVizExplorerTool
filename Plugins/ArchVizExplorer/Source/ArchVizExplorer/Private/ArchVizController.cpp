@@ -102,6 +102,174 @@ void AArchVizController::BindWidgetDelegates() {
 	}
 }
 
+//ConstructionMode Handler
+void AArchVizController::ConstructionModeHandler()
+{
+	switch (SelectedWidget) {
+	case EWidgetSelection::RoadConstructor: {
+		if (RoadWidgetClassRef) {
+			if (RoadWidget) {
+				RoadWidget->AddToViewport();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::BuildingConstructor: {
+		if (BuildingConstructorWidgetClassRef) {
+			if (BuildingConstructorWidget) {
+				BuildingConstructorWidget->AddToViewport();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::MaterialManagment: {
+		if (MaterialManagmentWidgetClassRef) {
+			if (MaterialManagmentWidget) {
+				MaterialManagmentWidget->AddToViewport();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::InteriorDesign: {
+		if (InteriorDesignWidgetClassRef) {
+			if (InteriorDesignWidget) {
+				InteriorDesignWidget->AddToViewport();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::LoadSaveTemplate:
+	{
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	}
+}
+
+void AArchVizController::HandleModeChange()
+{
+	if (RoadConstructor) {
+		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(false);
+	}
+	if (IsValid(WallGeneratorActor)) {
+		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
+
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
+			{
+				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(false);
+			}
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(false);
+		}
+
+		WallGeneratorActor = nullptr;
+	}
+	if (DoorHighlightComponent) {
+		DoorHighlightComponent->SetRenderCustomDepth(false);
+		DoorHighlightComponent = nullptr;
+	}
+	if (IsValid(DoorMeshActor)) {
+		DoorMeshActor->Destroy();
+		DoorMeshActor = nullptr;
+	}
+	if (IsValid(InteriorDesignActor)) {
+		InteriorDesignActor->InteriorMeshComponent->SetRenderCustomDepth(false);
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;
+	}
+	if (IsValid(FloorGeneratorActor)) {
+		FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(false);
+		FloorGeneratorActor = nullptr;
+	}
+	if (IsValid(RoofGeneratorActor)) {
+		RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(false);
+		RoofGeneratorActor = nullptr;
+	}
+}
+
+//Template Load And Save
+
 void AArchVizController::ToggleVisibility(){
 	HomeWidget->SaveMenu->SetVisibility(ESlateVisibility::Visible);
 	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
@@ -110,24 +278,7 @@ void AArchVizController::ToggleVisibility(){
 
 void AArchVizController::OnTemplatePressed()
 {
-	if (WallGeneratorActor) {
-		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
-		WallGeneratorActor = nullptr;
-	};
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
-	if (IsValid(InteriorDesignActor)) {
-		InteriorDesignActor->Destroy();
-		InteriorDesignActor = nullptr;
-	}
-	if (IsValid(FloorGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
-	if (IsValid(RoofGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
+	HandleModeChange();
 
 	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
 
@@ -417,24 +568,7 @@ void AArchVizController::Tick(float DeltaSeconds)
 //BuildingConstruction
 void AArchVizController::OnBuildingConstructionPressed()
 {
-	if (WallGeneratorActor) {
-		if(!bBuildingEditorMode){WallGeneratorActor->Destroy(); }
-		WallGeneratorActor = nullptr;
-	};
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
-	if (IsValid(InteriorDesignActor)) {
-		InteriorDesignActor->Destroy();
-		InteriorDesignActor = nullptr;
-	}
-	if (IsValid(FloorGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
-	if (IsValid(RoofGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
+	HandleModeChange();
 
 	SelectedWidget = EWidgetSelection::BuildingConstructor;
 	SelectedBuildingComponent = EBuildingComponentSelection::None;
@@ -497,10 +631,15 @@ void AArchVizController::SetDefaultBuildingMode()
 	if (WallGeneratorActor) {
 		WallGeneratorActor = nullptr;
 	}
+	if (DoorHighlightComponent) {
+		DoorHighlightComponent = nullptr;
+	}
 	if (FloorGeneratorActor) {
+		FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(false);
 		FloorGeneratorActor = nullptr;
 	}
 	if (RoofGeneratorActor) {
+		RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(false);
 		RoofGeneratorActor = nullptr;
 	}
 
@@ -864,10 +1003,10 @@ void AArchVizController::GenerateFloor() {
 			float width = FMath::Abs(CurrentLocation.Y - FloorStartLocation.Y);
 			float height = 5;
 
-			FloorGeneratorActor->FloorDimensions = FVector(length, width, height);
+			//FloorGeneratorActor->FloorDimensions = FVector(length, width, height);
 
 			FloorGeneratorActor->SetActorLocation((FloorStartLocation + CurrentLocation) / 2);
-			FloorGeneratorActor->GenerateFloor(FloorGeneratorActor->FloorDimensions);
+			FloorGeneratorActor->GenerateFloor({length , width , height});
 			SnapFloorActor(12.5);
 		}
 	}
@@ -1153,15 +1292,16 @@ void AArchVizController::SnapRoofActor(float SnapValue) {
 
 void AArchVizController::OnBuildingEditorModePressed()
 {
-	if (IsValid(WallGeneratorActor)) {
-		WallGeneratorActor->Destroy();
-		WallGeneratorActor = nullptr;
-	}
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
 	if (!bBuildingEditorMode) {
+		if (IsValid(WallGeneratorActor)) {
+			WallGeneratorActor->Destroy();
+			WallGeneratorActor = nullptr;
+		}
+		if (IsValid(DoorMeshActor)) {
+			DoorMeshActor->Destroy();
+			DoorMeshActor = nullptr;
+		}
+
 		BuildingConstructorWidget->BuildingEditorMode->SetText(FText::FromString("Exit Editor Mode"));
 		if (WallGeneratorActor) {
 			if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
@@ -1217,11 +1357,30 @@ void AArchVizController::SetEditorModeMapping()
 
 void AArchVizController::OnAssetSelection()
 {
+	if(FloorGeneratorActor){
+		FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(false);
+	}
+	if(RoofGeneratorActor){
+		RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(false);
+	}
+	if (WallGeneratorActor) {
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(false);
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(false);
+		}
+	}
+	if (DoorHighlightComponent) {
+		DoorHighlightComponent->SetRenderCustomDepth(false);
+	}
+
 	if (!bProjection) {
 		GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
 
 		if (Cast<AWallGenerator>(HitResult.GetActor())) {
 			WallGeneratorActor = Cast<AWallGenerator>(HitResult.GetActor());
+
 			UStaticMeshComponent* TempComponent{};
 			if (Cast<UStaticMeshComponent>(HitResult.GetComponent())) {
 				TempComponent = Cast<UStaticMeshComponent>(HitResult.GetComponent());
@@ -1235,6 +1394,12 @@ void AArchVizController::OnAssetSelection()
 				EditWall();
 			}
 			else if (HeightOfMesh != WallGeneratorActor->WallHeight) {
+				if (Cast<UStaticMeshComponent>(HitResult.GetComponent()))
+				{
+					DoorHighlightComponent = Cast<UStaticMeshComponent>(HitResult.GetComponent());
+					DoorHighlightComponent->SetRenderCustomDepth(true);
+					DoorHighlightComponent->CustomDepthStencilValue = 2.0;
+				}
 				EditDoor();
 			}
 			else {
@@ -1244,10 +1409,14 @@ void AArchVizController::OnAssetSelection()
 		}
 		else if (Cast<AFloorGenerator>(HitResult.GetActor())) {
 			FloorGeneratorActor = Cast<AFloorGenerator>(HitResult.GetActor());
+			FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(true);
+			FloorGeneratorActor->FloorComponent->CustomDepthStencilValue = 2.0;
 			EditFloor();
 		}
 		else if (Cast<ARoofGenerator>(HitResult.GetActor())) {
 			RoofGeneratorActor = Cast<ARoofGenerator>(HitResult.GetActor());
+			RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(true);
+			RoofGeneratorActor->RoofComponent->CustomDepthStencilValue = 2.0;
 			EditRoof();
 		}
 		else {
@@ -1284,6 +1453,18 @@ void AArchVizController::EditWall()
 		FVector CurrentLocation = WallGeneratorActor->GetActorLocation();
 		BuildingConstructorWidget->Wall_X->SetValue(CurrentLocation.X);
 		BuildingConstructorWidget->Wall_Y->SetValue(CurrentLocation.Y);
+
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
+			{
+				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(true);
+				WallGeneratorActor->ComponentsArray[i]->CustomDepthStencilValue = 2.0;
+			}
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(true);
+			WallProcedural.Value.ProceduralMesh->CustomDepthStencilValue = 2.0;
+		}
 	}
 }
 
@@ -1375,10 +1556,6 @@ void AArchVizController::OnDoorDestroyerPressed()
 			//Floor Edit Logic
 void AArchVizController::EditFloor()
 {
-	BuildingConstructorWidget->FloorDimensionsBorder->SetVisibility(ESlateVisibility::Visible);
-	BuildingConstructorWidget->FloorLocationBorder->SetVisibility(ESlateVisibility::Visible);
-	BuildingConstructorWidget->FloorDestroyer->SetVisibility(ESlateVisibility::Visible);
-
 	BuildingConstructorWidget->DoorScrollBox->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->WallDestroyer->SetVisibility(ESlateVisibility::Hidden);
@@ -1395,6 +1572,10 @@ void AArchVizController::EditFloor()
 		BuildingConstructorWidget->FloorWidth->SetValue(FloorGeneratorActor->FloorDimensions.Y);
 		BuildingConstructorWidget->FloorHeight->SetValue(FloorGeneratorActor->FloorDimensions.Z);
 	}
+
+	BuildingConstructorWidget->FloorDimensionsBorder->SetVisibility(ESlateVisibility::Visible);
+	BuildingConstructorWidget->FloorLocationBorder->SetVisibility(ESlateVisibility::Visible);
+	BuildingConstructorWidget->FloorDestroyer->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AArchVizController::OnFloorLocationXChanged(float Value)
@@ -1435,8 +1616,8 @@ void AArchVizController::OnFloorLengthChanged(float FloorLength)
 		FVector FloorDimensions{};
 		if (BuildingConstructorWidget) {
 			float length = FloorLength;
-			float Width = BuildingConstructorWidget->FloorWidth->GetValue();
-			float Height = BuildingConstructorWidget->FloorHeight->GetValue();
+			float Width = FloorGeneratorActor->FloorDimensions.Y;
+			float Height = FloorGeneratorActor->FloorDimensions.Z;
 
 			FloorDimensions = FVector(length, Width, Height);
 		}
@@ -1452,9 +1633,9 @@ void AArchVizController::OnFloorWidthChanged(float FloorWidth)
 
 		FVector FloorDimensions{};
 		if (BuildingConstructorWidget) {
-			float length = BuildingConstructorWidget->FloorLength->GetValue();
+			float length = FloorGeneratorActor->FloorDimensions.X;
 			float Width = FloorWidth;
-			float Height = BuildingConstructorWidget->FloorHeight->GetValue();
+			float Height = FloorGeneratorActor->FloorDimensions.Z;
 
 			FloorDimensions = FVector(length, Width, Height);
 		}
@@ -1470,8 +1651,8 @@ void AArchVizController::OnFloorHeightChanged(float FloorHeight)
 
 		FVector FloorDimensions{};
 		if (BuildingConstructorWidget) {
-			float length = BuildingConstructorWidget->FloorLength->GetValue();
-			float Width = BuildingConstructorWidget->FloorWidth->GetValue();
+			float length = FloorGeneratorActor->FloorDimensions.X;
+			float Width = FloorGeneratorActor->FloorDimensions.Y;
 			float Height = FloorHeight;
 
 			FloorDimensions = FVector(length, Width, Height);
@@ -1563,8 +1744,8 @@ void AArchVizController::OnRoofLengthChanged(float RoofLength)
 		FVector RoofDimensions{};
 		if (BuildingConstructorWidget) {
 			float length = RoofLength;
-			float Width = BuildingConstructorWidget->RoofWidth->GetValue();
-			float Height = BuildingConstructorWidget->RoofHeight->GetValue();
+			float Width = RoofGeneratorActor->RoofDimensions.Y;
+			float Height = RoofGeneratorActor->RoofDimensions.Z;
 
 			RoofDimensions = FVector(length, Width, Height);
 		}
@@ -1580,9 +1761,9 @@ void AArchVizController::OnRoofWidthChanged(float RoofWidth)
 
 		FVector RoofDimensions{};
 		if (BuildingConstructorWidget) {
-			float length = BuildingConstructorWidget->RoofLength->GetValue();
+			float length = RoofGeneratorActor->RoofDimensions.X;
 			float Width = RoofWidth;
-			float Height = BuildingConstructorWidget->RoofHeight->GetValue();
+			float Height = RoofGeneratorActor->RoofDimensions.Z;
 
 			RoofDimensions = FVector(length, Width, Height);
 		}
@@ -1598,138 +1779,14 @@ void AArchVizController::OnRoofHeightChanged(float RoofHeight)
 
 		FVector RoofDimensions{};
 		if (BuildingConstructorWidget) {
-			float length = BuildingConstructorWidget->RoofLength->GetValue();
-			float Width = BuildingConstructorWidget->RoofWidth->GetValue();
+			float length = RoofGeneratorActor->RoofDimensions.X;
+			float Width = RoofGeneratorActor->RoofDimensions.Y;
 			float Height = RoofHeight;
 
 			RoofDimensions = FVector(length, Width, Height);
 		}
 		RoofGeneratorActor->RoofDimensions.Z = RoofHeight;
 		RoofGeneratorActor->GenerateRoof(RoofDimensions);
-	}
-}
-
-
-//ConstructionMode Handler
-void AArchVizController::ConstructionModeHandler()
-{
-	switch (SelectedWidget) {
-	case EWidgetSelection::RoadConstructor: {
-		if(RoadWidgetClassRef) {
-			if(RoadWidget){
-				RoadWidget->AddToViewport();
-			}
-		}
-		if(BuildingConstructorWidget){
-			if (BuildingConstructorWidget->IsInViewport()) {
-				BuildingConstructorWidget->RemoveFromParent();
-			}
-		}
-		if(MaterialManagmentWidget){
-			if (MaterialManagmentWidget->IsInViewport()) {
-				MaterialManagmentWidget->RemoveFromParent();
-			}
-		}
-		if(InteriorDesignWidget){
-			if (InteriorDesignWidget->IsInViewport()) {
-				InteriorDesignWidget->RemoveFromParent();
-			}
-		}
-		break;
-	}
-	case EWidgetSelection::BuildingConstructor: {
-		if(BuildingConstructorWidgetClassRef) {
-			if(BuildingConstructorWidget){
-				BuildingConstructorWidget->AddToViewport();
-			}
-		}
-		if (RoadWidget) {
-			if (RoadWidget->IsInViewport()) {
-				RoadWidget->RemoveFromParent();
-			}
-		}
-		if (MaterialManagmentWidget) {
-			if (MaterialManagmentWidget->IsInViewport()) {
-				MaterialManagmentWidget->RemoveFromParent();
-			}
-		}
-		if (InteriorDesignWidget) {
-			if (InteriorDesignWidget->IsInViewport()) {
-				InteriorDesignWidget->RemoveFromParent();
-			}
-		}
-		break;
-	}
-	case EWidgetSelection::MaterialManagment: {
-		if(MaterialManagmentWidgetClassRef) {
-				if(MaterialManagmentWidget){	
-				MaterialManagmentWidget->AddToViewport();
-				}
-		}
-		if (RoadWidget) {
-			if (RoadWidget->IsInViewport()) {
-				RoadWidget->RemoveFromParent();
-			}
-		}
-		if (BuildingConstructorWidget) {
-			if (BuildingConstructorWidget->IsInViewport()) {
-				BuildingConstructorWidget->RemoveFromParent();
-			}
-		}
-		if (InteriorDesignWidget) {
-			if (InteriorDesignWidget->IsInViewport()) {
-				InteriorDesignWidget->RemoveFromParent();
-			}
-		}
-		break;
-	}
-	case EWidgetSelection::InteriorDesign: {
-		if (InteriorDesignWidget) {
-			if (InteriorDesignWidget->IsInViewport()) {
-				InteriorDesignWidget->RemoveFromParent();
-			}
-		}
-		if (RoadWidget) {
-			if (RoadWidget->IsInViewport()) {
-				RoadWidget->RemoveFromParent();
-			}
-		}
-		if (BuildingConstructorWidget) {
-			if (BuildingConstructorWidget->IsInViewport()) {
-				BuildingConstructorWidget->RemoveFromParent();
-			}
-		}
-		if (MaterialManagmentWidget) {
-			if (MaterialManagmentWidget->IsInViewport()) {
-				MaterialManagmentWidget->RemoveFromParent();
-			}
-		}
-		break;
-	}
-	case EWidgetSelection::LoadSaveTemplate:
-	{
-		if (InteriorDesignWidget) {
-			if (InteriorDesignWidget->IsInViewport()) {
-				InteriorDesignWidget->RemoveFromParent();
-			}
-		}
-		if (RoadWidget) {
-			if (RoadWidget->IsInViewport()) {
-				RoadWidget->RemoveFromParent();
-			}
-		}
-		if (BuildingConstructorWidget) {
-			if (BuildingConstructorWidget->IsInViewport()) {
-				BuildingConstructorWidget->RemoveFromParent();
-			}
-		}
-		if (MaterialManagmentWidget) {
-			if (MaterialManagmentWidget->IsInViewport()) {
-				MaterialManagmentWidget->RemoveFromParent();
-			}
-		}
-		break;
-	}
 	}
 }
 
@@ -1796,6 +1853,7 @@ void AArchVizController::GetRoadLocationOnClick()
 		}
 	}
 	else {
+		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(false);
 		GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
 		if (IsValid(HitResult.GetActor())) {
 			if (Cast<ARoadConstructor>(HitResult.GetActor())) {
@@ -1803,6 +1861,9 @@ void AArchVizController::GetRoadLocationOnClick()
 				RoadWidget->WidthValueBox->SetValue(RoadConstructor->GetActorScale3D().Y * RoadDimensions.Y);
 				RoadWidget->Location_x->SetValue(RoadConstructor->GetActorLocation().X);
 				RoadWidget->Location_Y->SetValue(RoadConstructor->GetActorLocation().Y);
+
+				RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(true);
+				RoadConstructor->ProceduralMeshComponent->CustomDepthStencilValue = 2.0;
 			}
 		}
 	}
@@ -1871,24 +1932,7 @@ void AArchVizController::SetRoadConstructionMapping()
 
 void AArchVizController::OnRoadConstructionPressed()
 {
-	if (IsValid(WallGeneratorActor)) {
-		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
-		WallGeneratorActor = nullptr;
-	}
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
-	if (IsValid(InteriorDesignActor)) {
-		InteriorDesignActor->Destroy();
-		InteriorDesignActor = nullptr;
-	}
-	if (IsValid(FloorGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
-	if (IsValid(RoofGeneratorActor)) {
-		RoofGeneratorActor = nullptr;
-	}
+	HandleModeChange();
 
 	if (bRoadEditorMode) {
 		OnRoadEditorModePressed();
@@ -1949,24 +1993,7 @@ void AArchVizController::OnRoadWidthChanged(float Value)
 
 void AArchVizController::OnMaterialManagmentPressed()
 {
-	if (IsValid(WallGeneratorActor)) {
-		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
-		WallGeneratorActor = nullptr;
-	}
-	if (IsValid(InteriorDesignActor)) {
-		InteriorDesignActor->Destroy();
-		InteriorDesignActor = nullptr;
-	}
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
-	if (IsValid(FloorGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
-	if (IsValid(RoofGeneratorActor)) {
-		RoofGeneratorActor = nullptr;
-	}
+	HandleModeChange();
 
 	SelectedWidget = EWidgetSelection::MaterialManagment;
 
@@ -1999,10 +2026,30 @@ void AArchVizController::SetMaterialManagmentMapping()
 
 void AArchVizController::SelectActorOnClick()
 {
-	RoadConstructor = nullptr;
-	WallGeneratorActor = nullptr;
-	FloorGeneratorActor = nullptr;
-	RoofGeneratorActor = nullptr;
+	if(WallGeneratorActor){
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
+			{
+				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(false);
+			}
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(false);
+		}
+		WallGeneratorActor = nullptr;
+	}
+	if (RoofGeneratorActor) {
+		RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(false);
+		RoofGeneratorActor = nullptr;
+	}
+	if (FloorGeneratorActor) {
+		FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(false);
+		FloorGeneratorActor = nullptr;
+	}
+	if (RoadConstructor) {
+		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(false);
+		RoadConstructor = nullptr;
+	}
 
 	GetHitResultUnderCursor(ECC_Visibility, true, HitResult);
 	if (Cast<ARoadConstructor>(HitResult.GetActor())) {
@@ -2011,6 +2058,8 @@ void AArchVizController::SelectActorOnClick()
 		MaterialManagmentWidget->BuildingMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
 
 		RoadConstructor = Cast<ARoadConstructor>(HitResult.GetActor());
+		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(true);
+		RoadConstructor->ProceduralMeshComponent->CustomDepthStencilValue = 2.0;
 	}
 	else if (Cast<AWallGenerator>(HitResult.GetActor())) {
 		MaterialManagmentWidget->RoadMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
@@ -2018,20 +2067,34 @@ void AArchVizController::SelectActorOnClick()
 
 		WallGeneratorActor = Cast<AWallGenerator>(HitResult.GetActor());
 		bBuildingEditorMode = true;
+
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
+			{
+				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(true);
+				WallGeneratorActor->ComponentsArray[i]->CustomDepthStencilValue = 2.0;
+			}
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(true);
+			WallProcedural.Value.ProceduralMesh->CustomDepthStencilValue = 2.0;
+		}
 	}
 	else if (Cast<AFloorGenerator>(HitResult.GetActor())) {
 		MaterialManagmentWidget->RoadMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
 		MaterialManagmentWidget->BuildingMaterialScrollBox->SetVisibility(ESlateVisibility::Visible);
 
 		FloorGeneratorActor = Cast<AFloorGenerator>(HitResult.GetActor());
-
+		FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(true);
+		FloorGeneratorActor->FloorComponent->CustomDepthStencilValue = 2.0;
 	}
 	else if (Cast<ARoofGenerator>(HitResult.GetActor())) {
 		MaterialManagmentWidget->RoadMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
 		MaterialManagmentWidget->BuildingMaterialScrollBox->SetVisibility(ESlateVisibility::Visible);
 
 		RoofGeneratorActor = Cast<ARoofGenerator>(HitResult.GetActor());
-
+		RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(true);
+		RoofGeneratorActor->RoofComponent->CustomDepthStencilValue = 2.0;
 	}
 	else {
 		MaterialManagmentWidget->RoadMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
@@ -2061,24 +2124,7 @@ void AArchVizController::ApplyBuildingMaterial(const FBuildingMaterialData& Buil
 //Interior Design Mode
 void AArchVizController::OnInteriorDesignPressed()
 {
-	if (IsValid(WallGeneratorActor)) {
-		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
-		WallGeneratorActor = nullptr;
-	}
-	if (IsValid(InteriorDesignActor)) {
-		InteriorDesignActor->Destroy();
-		InteriorDesignActor = nullptr;
-	}
-	if (IsValid(DoorMeshActor)) {
-		DoorMeshActor->Destroy();
-		DoorMeshActor = nullptr;
-	}
-	if (IsValid(FloorGeneratorActor)) {
-		FloorGeneratorActor = nullptr;
-	}
-	if (IsValid(RoofGeneratorActor)) {
-		RoofGeneratorActor = nullptr;
-	}
+	HandleModeChange();
 
 	SelectedWidget = EWidgetSelection::InteriorDesign;
 
@@ -2116,6 +2162,10 @@ void AArchVizController::SetInteriorDesignMapping()
 
 void AArchVizController::PlaceInteriorOnClick()
 {
+	if (InteriorDesignActor) {
+		InteriorDesignActor->InteriorMeshComponent->SetRenderCustomDepth(false);
+	}
+
 	FVector LastLocation;
 	if (InteriorDesignActor) {
 		LastLocation = InteriorDesignActor->GetActorLocation();
@@ -2163,6 +2213,8 @@ void AArchVizController::PlaceInteriorOnClick()
 				else {
 					InteriorDesignActor = nullptr;
 					InteriorDesignActor = Cast<AInteriorDesignActor>(HitResult.GetActor());
+					InteriorDesignActor->InteriorMeshComponent->SetRenderCustomDepth(true);
+					InteriorDesignActor->InteriorMeshComponent->CustomDepthStencilValue = 2.0;
 				}
 			}
 		}
@@ -2186,6 +2238,9 @@ void AArchVizController::ApplyInterior(const FInteriorData& InteriorData)
 	if (InteriorDesignActor) {
 		InteriorDesignActor->IdentityIndex = InteriorData.IdentityIndex;
 		if(InteriorData.InteriorMesh){InteriorDesignActor->SetInteriorMesh(InteriorData.InteriorMesh);}
+
+		InteriorDesignActor->InteriorMeshComponent->SetRenderCustomDepth(true);
+		InteriorDesignActor->InteriorMeshComponent->CustomDepthStencilValue = 2.0;
 	}
 }
 
@@ -2285,28 +2340,3 @@ FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorAct
 	}
 	return Location;
 }
-
-//void AArchVizController::RetrieveFilenamesFromDirectory(const FString& DirectoryPath, TArray<FString>& OutFilenames)
-//{
-//	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-//
-//	if (PlatformFile.DirectoryExists(*DirectoryPath))
-//	{
-//		struct FFileVisitor : public IPlatformFile::FDirectoryVisitor
-//		{
-//			TArray<FString>& FileNames;
-//			FFileVisitor(TArray<FString>& InFileNames) : FileNames(InFileNames) {}
-//
-//			virtual bool Visit(const TCHAR* FilenameOrDirectory, bool bIsDirectory) override
-//			{
-//				if (!bIsDirectory)
-//				{
-//					FileNames.Add(FPaths::GetBaseFilename(FilenameOrDirectory));
-//				}
-//				return true; 
-//			}
-//		};
-//		FFileVisitor Visitor(OutFilenames);
-//		PlatformFile.IterateDirectory(*DirectoryPath, Visitor);
-//	}
-//}

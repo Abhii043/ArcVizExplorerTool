@@ -79,6 +79,10 @@ private:
 	UFUNCTION(BlueprintCallable, category = "ArchVizController")
 	void BindWidgetDelegates();
 	UFUNCTION()
+	void HandleModeChange();
+
+	//Template Load And Save
+	UFUNCTION()
 	void ToggleVisibility();
 	UFUNCTION()
 	void OnTemplatePressed();
@@ -277,6 +281,8 @@ private:
 	UInputMappingContext* EditorMapping; 
 	UPROPERTY()
 	UInputAction* SelectAssetAction;
+	UPROPERTY()
+	UStaticMeshComponent* DoorHighlightComponent;
 
 	UFUNCTION()
 	void OnBuildingEditorModePressed();
