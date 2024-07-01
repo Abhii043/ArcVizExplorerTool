@@ -20,6 +20,7 @@
 #include "RoofGenerator.h"
 #include <Engine/StaticMeshActor.h>
 #include <InteriorDesignActor.h>
+#include "ScrollBoxChild.h"
 #include "ArchVizController.generated.h"
 
 UENUM()
@@ -27,7 +28,8 @@ enum class EWidgetSelection {
 	RoadConstructor,
 	BuildingConstructor,
 	InteriorDesign,
-	MaterialManagment
+	MaterialManagment,
+	LoadSaveTemplate
 };
 
 UENUM()
@@ -67,6 +69,11 @@ private:
 	UPROPERTY()
 	FHitResult HitResult;
 
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<UScrollBoxChild> ScrollBoxChildRef;
+	UPROPERTY()
+	UScrollBoxChild* ScrollBoxChild;
+
 	UFUNCTION(BlueprintCallable , category = "ArchVizController")
 	void ConstructionModeHandler(); 	
 	UFUNCTION(BlueprintCallable, category = "ArchVizController")
@@ -74,9 +81,25 @@ private:
 	UFUNCTION()
 	void ToggleVisibility();
 	UFUNCTION()
+	void OnTemplatePressed();
+	UFUNCTION()
 	void SaveTemplate();
 	UFUNCTION()
-	void LoadTemplate();
+	void LoadTemplate(const FText& Slot);
+	UFUNCTION()
+	TArray<FString> FindFiles(FString Path, FString Extension);
+	UFUNCTION()
+	void EmptyViewportBeforeLoad();
+	UFUNCTION()
+	void HideSaveAndLoadMenu();
+	UFUNCTION()
+	void HideSaveMenu();
+	UFUNCTION()
+	void HideLoadMenu();
+	UFUNCTION()
+	void LoadTemplateList_();
+	UFUNCTION()
+	void DeleteSavedSlot(const FText& Slot);
 
 
 	//Road Construction Mapping
