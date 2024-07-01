@@ -9,6 +9,7 @@
 #include <Components/Button.h>
 #include <Components/HorizontalBox.h>
 #include <Components/EditableText.h>
+#include <Components/TextBlock.h>
 #include <Components/ScrollBox.h>
 #include "HomeWidget.generated.h"
 
@@ -32,35 +33,14 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UButton* MaterialManagment;
 	UPROPERTY(meta = (BindWidget))
-	UButton* InteriorDesign;
-
+	UButton* InteriorDesign; 
+	UPROPERTY(meta = (BindWidget))
+	UButton* HomeButton;
 	UPROPERTY(meta = (BindWidget))
 	UButton* Template;
 	UPROPERTY(meta = (BindWidget))
-	UButton* SaveTemplate;
-	UPROPERTY(meta = (BindWidget))
-	UButton* LoadTemplate;
-	UPROPERTY(meta = (BindWidget))
-	UEditableText* SlotNameTxt;
-	UPROPERTY(meta = (BindWidget))
-	UButton* SaveBtn;
+	UTextBlock* PopUpText;
 
-	UPROPERTY(meta = (BindWidget))
-	UButton* Close_1;
-	UPROPERTY(meta = (BindWidget))
-	UButton* Close_2;
-	UPROPERTY(meta = (BindWidget))
-	UButton* Close_3;
-
-	UPROPERTY(meta = (BindWidget))
-	UBorder* SaveMenu;
-	UPROPERTY(meta = (BindWidget))
-	UBorder* LoadMenu;
-	UPROPERTY(meta = (BindWidget))
-	UBorder* SaveLoadMenu;
-
-	UPROPERTY(meta = (BindWidget))
-	UScrollBox* LoadAllTemplateList;
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	UWidgetAnimation* PopUpAnimation;
 };

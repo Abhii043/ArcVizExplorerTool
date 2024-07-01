@@ -21,10 +21,12 @@
 #include <Engine/StaticMeshActor.h>
 #include <InteriorDesignActor.h>
 #include "ScrollBoxChild.h"
+#include <SaveLoadWidget.h>
 #include "ArchVizController.generated.h"
 
 UENUM()
 enum class EWidgetSelection {
+	Home,
 	RoadConstructor,
 	BuildingConstructor,
 	InteriorDesign,
@@ -62,6 +64,10 @@ private:
 	TSubclassOf<UHomeWidget> HomeWidgetClassRef;
 	UPROPERTY()
 	UHomeWidget* HomeWidget;
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<USaveLoadWidget> SaveLoadWidgetClassRef;
+	UPROPERTY()
+	USaveLoadWidget* SaveLoadWidget;
 	UPROPERTY()
 	EWidgetSelection SelectedWidget; 
 	UPROPERTY()
@@ -80,12 +86,16 @@ private:
 	void BindWidgetDelegates();
 	UFUNCTION()
 	void HandleModeChange();
+	UFUNCTION()
+	void OnHomeButtonPressed();
 
 	//Template Load And Save
 	UFUNCTION()
 	void ToggleVisibility();
 	UFUNCTION()
 	void OnTemplatePressed();
+	UFUNCTION()
+	bool CheckFileExists(const FString& FileName);
 	UFUNCTION()
 	void SaveTemplate();
 	UFUNCTION()

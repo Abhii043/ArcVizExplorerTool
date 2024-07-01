@@ -6,7 +6,7 @@
 #include "ArchVizExplorerSave.h"
 #include "Kismet/GameplayStatics.h"
 
-AArchVizController::AArchVizController() : bGetLocation{ true }, bFirstRoad{ true }, bRoadEditorMode{ false }, bBuildingEditorMode{ false }, bIsWallProjection{ false }, SelectedBuildingComponent{ EBuildingComponentSelection::None }, bIsFloorProjection{ false }
+AArchVizController::AArchVizController() :bGetLocation{ true }, bFirstRoad{ true }, bRoadEditorMode{ false }, bBuildingEditorMode{ false }, bIsWallProjection{ false }, SelectedBuildingComponent{ EBuildingComponentSelection::None }, bIsFloorProjection{ false }
 {
 
 }
@@ -19,6 +19,9 @@ void AArchVizController::BeginPlay()
 	if (HomeWidgetClassRef) {
 		HomeWidget = CreateWidget<UHomeWidget>(this, HomeWidgetClassRef);
 		HomeWidget->AddToViewport();
+	}
+	if (SaveLoadWidgetClassRef) {
+		SaveLoadWidget = CreateWidget<USaveLoadWidget>(this, SaveLoadWidgetClassRef);
 	}
 	if (RoadWidgetClassRef) {
 		RoadWidget = CreateWidget<URoadUIWidget>(this, RoadWidgetClassRef);
@@ -41,14 +44,16 @@ void AArchVizController::BindWidgetDelegates() {
 		HomeWidget->BuildingConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnBuildingConstructionPressed);
 		HomeWidget->MaterialManagment->OnClicked.AddDynamic(this, &AArchVizController::OnMaterialManagmentPressed);
 		HomeWidget->InteriorDesign->OnClicked.AddDynamic(this, &AArchVizController::OnInteriorDesignPressed);
+		HomeWidget->HomeButton->OnClicked.AddDynamic(this, &AArchVizController::OnHomeButtonPressed);
 		HomeWidget->Template->OnClicked.AddDynamic(this, &AArchVizController::OnTemplatePressed);
-		HomeWidget->SaveTemplate->OnClicked.AddDynamic(this, &AArchVizController::ToggleVisibility);
-		HomeWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::LoadTemplateList_);
-		//HomeWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::LoadTemplate);
-		HomeWidget->SaveBtn->OnClicked.AddDynamic(this, &AArchVizController::SaveTemplate);
-		HomeWidget->Close_1->OnClicked.AddDynamic(this, &AArchVizController::HideSaveAndLoadMenu);
-		HomeWidget->Close_2->OnClicked.AddDynamic(this, &AArchVizController::HideSaveMenu);
-		HomeWidget->Close_3->OnClicked.AddDynamic(this, &AArchVizController::HideLoadMenu);
+	}
+	if (SaveLoadWidget) {		
+		SaveLoadWidget->SaveTemplate->OnClicked.AddDynamic(this, &AArchVizController::ToggleVisibility);
+		SaveLoadWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::LoadTemplateList_);
+		SaveLoadWidget->SaveBtn->OnClicked.AddDynamic(this, &AArchVizController::SaveTemplate);
+		SaveLoadWidget->Close_1->OnClicked.AddDynamic(this, &AArchVizController::HideSaveAndLoadMenu);
+		SaveLoadWidget->Close_2->OnClicked.AddDynamic(this, &AArchVizController::HideSaveMenu);
+		SaveLoadWidget->Close_3->OnClicked.AddDynamic(this, &AArchVizController::HideLoadMenu);
 	}
 	if (RoadWidget) {
 		RoadWidget->EditorMode->OnClicked.AddDynamic(this, &AArchVizController::OnRoadEditorModePressed);
@@ -127,6 +132,10 @@ void AArchVizController::ConstructionModeHandler()
 				InteriorDesignWidget->RemoveFromParent();
 			}
 		}
+		if (SaveLoadWidget) {
+			SaveLoadWidget->IsInViewport();
+			SaveLoadWidget->RemoveFromParent();
+		}
 		break;
 	}
 	case EWidgetSelection::BuildingConstructor: {
@@ -149,6 +158,10 @@ void AArchVizController::ConstructionModeHandler()
 			if (InteriorDesignWidget->IsInViewport()) {
 				InteriorDesignWidget->RemoveFromParent();
 			}
+		}
+		if (SaveLoadWidget) {
+			SaveLoadWidget->IsInViewport();
+			SaveLoadWidget->RemoveFromParent();
 		}
 		break;
 	}
@@ -173,6 +186,10 @@ void AArchVizController::ConstructionModeHandler()
 				InteriorDesignWidget->RemoveFromParent();
 			}
 		}
+		if (SaveLoadWidget) {
+			SaveLoadWidget->IsInViewport();
+			SaveLoadWidget->RemoveFromParent();
+		}
 		break;
 	}
 	case EWidgetSelection::InteriorDesign: {
@@ -196,10 +213,46 @@ void AArchVizController::ConstructionModeHandler()
 				MaterialManagmentWidget->RemoveFromParent();
 			}
 		}
+		if (SaveLoadWidget) {
+			SaveLoadWidget->IsInViewport();
+			SaveLoadWidget->RemoveFromParent();
+		}
 		break;
 	}
 	case EWidgetSelection::LoadSaveTemplate:
 	{
+		if (SaveLoadWidgetClassRef) {
+			if (SaveLoadWidget) {
+				SaveLoadWidget->AddToViewport();
+			}
+		}
+		if (InteriorDesignWidget) {
+			if (InteriorDesignWidget->IsInViewport()) {
+				InteriorDesignWidget->RemoveFromParent();
+			}
+		}
+		if (RoadWidget) {
+			if (RoadWidget->IsInViewport()) {
+				RoadWidget->RemoveFromParent();
+			}
+		}
+		if (BuildingConstructorWidget) {
+			if (BuildingConstructorWidget->IsInViewport()) {
+				BuildingConstructorWidget->RemoveFromParent();
+			}
+		}
+		if (MaterialManagmentWidget) {
+			if (MaterialManagmentWidget->IsInViewport()) {
+				MaterialManagmentWidget->RemoveFromParent();
+			}
+		}
+		break;
+	}
+	case EWidgetSelection::Home: {
+		if (SaveLoadWidget) {
+				SaveLoadWidget->IsInViewport();
+				SaveLoadWidget->RemoveFromParent();
+		}
 		if (InteriorDesignWidget) {
 			if (InteriorDesignWidget->IsInViewport()) {
 				InteriorDesignWidget->RemoveFromParent();
@@ -268,19 +321,31 @@ void AArchVizController::HandleModeChange()
 	}
 }
 
+void AArchVizController::OnHomeButtonPressed()
+{
+	HandleModeChange();
+	if (GetLocalPlayer()) {
+		UEnhancedInputLocalPlayerSubsystem* SubSystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+		if (SubSystem) {
+			SubSystem->ClearAllMappings();
+		}
+	}
+
+	SelectedWidget = EWidgetSelection::Home;
+	ConstructionModeHandler();
+}
+
 //Template Load And Save
 
 void AArchVizController::ToggleVisibility(){
-	HomeWidget->SaveMenu->SetVisibility(ESlateVisibility::Visible);
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
-	HomeWidget->SlotNameTxt->SetText(FText::FromString(""));
+	SaveLoadWidget->SaveMenu->SetVisibility(ESlateVisibility::Visible);
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SlotNameTxt->SetText(FText::FromString(""));
 }
 
 void AArchVizController::OnTemplatePressed()
 {
 	HandleModeChange();
-
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
 
 	if (GetLocalPlayer()) {
 		UEnhancedInputLocalPlayerSubsystem* SubSystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
@@ -288,115 +353,133 @@ void AArchVizController::OnTemplatePressed()
 			SubSystem->ClearAllMappings();
 		}
 	}
+
 	SelectedWidget = EWidgetSelection::LoadSaveTemplate;
 
 	ConstructionModeHandler();
+
+	if (SaveLoadWidget) {
+		SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
+		SaveLoadWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
+		SaveLoadWidget->LoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+bool AArchVizController::CheckFileExists(const FString& FileName) {
+	IFileManager& FileManager = IFileManager::Get();
+
+	FString FilePath = FPaths::ProjectSavedDir() + "SaveGames/" + FileName + ".sav";
+
+	return FileManager.FileExists(*FilePath);
 }
 
 void AArchVizController::SaveTemplate()
 {
-	FText SlotText = HomeWidget->SlotNameTxt->GetText();
+	FText SlotText = SaveLoadWidget->SlotNameTxt->GetText();
 	if (!SlotText.IsEmpty()) {
-		HomeWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
-
-		UArchVizExplorerSave* SaveArchVizInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::CreateSaveGameObject(UArchVizExplorerSave::StaticClass()));
-
-		TArray<AActor*> RoadActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), RoadConstructorClassRef, RoadActors);
-
-		for (AActor* Actor : RoadActors)
-		{
-			ARoadConstructor* RoadActor = Cast<ARoadConstructor>(Actor);
-			if (RoadActor)
-			{
-				FRoadSaveData RoadData;
-				RoadData.RoadTransform = RoadActor->GetActorTransform();
-				RoadData.RoadMaterial = RoadActor->RoadMaterial;
-				RoadData.RoadDimensions = RoadActor->RoadDimensions;
-
-				SaveArchVizInstance->RoadActorArray.Add(RoadData);
-			}
+		if (CheckFileExists(SlotText.ToString())) {
+			HomeWidget->PopUpText->SetText(FText::FromString("This Slot Name Already Exist"));
+			HomeWidget->PlayAnimation(HomeWidget->PopUpAnimation);
 		}
+		else{
+			SaveLoadWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
 
-		TArray<AActor*> WallActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWallGenerator::StaticClass(), WallActors);
+			UArchVizExplorerSave* SaveArchVizInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::CreateSaveGameObject(UArchVizExplorerSave::StaticClass()));
 
-		for (AActor* Actor : WallActors)
-		{
-			AWallGenerator* WallActor = Cast<AWallGenerator>(Actor);
-			if (WallActor)
+			TArray<AActor*> RoadActors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), RoadConstructorClassRef, RoadActors);
+
+			for (AActor* Actor : RoadActors)
 			{
-				FWallSaveData WallData;
-				WallData.WallTransform = WallActor->GetActorTransform();
-				WallData.WallMaterial = WallActor->WallMaterial_;
-				WallData.NoOfSegments = WallActor->NoOfSegments;
-				WallData.WallGeneratorActorMap = WallActor->WallGeneratorActorMap;
+				ARoadConstructor* RoadActor = Cast<ARoadConstructor>(Actor);
+				if (RoadActor)
+				{
+					FRoadSaveData RoadData;
+					RoadData.RoadTransform = RoadActor->GetActorTransform();
+					RoadData.RoadMaterial = RoadActor->RoadMaterial;
+					RoadData.RoadDimensions = RoadActor->RoadDimensions;
 
-				SaveArchVizInstance->WallActorArray.Add(WallData);
+					SaveArchVizInstance->RoadActorArray.Add(RoadData);
+				}
 			}
-		}
 
-		TArray<AActor*> FloorActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorGenerator::StaticClass(), FloorActors);
+			TArray<AActor*> WallActors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), AWallGenerator::StaticClass(), WallActors);
 
-		for (AActor* Actor : FloorActors)
-		{
-			AFloorGenerator* FloorActor = Cast<AFloorGenerator>(Actor);
-			if (FloorActor)
+			for (AActor* Actor : WallActors)
 			{
-				FFloorSaveData FloorData;
-				FloorData.FloorTransform = FloorActor->GetActorTransform();
-				FloorData.FloorMaterial =FloorActor->FloorMaterial;
-				FloorData.FloorDimensions = FloorActor->FloorDimensions;
+				AWallGenerator* WallActor = Cast<AWallGenerator>(Actor);
+				if (WallActor)
+				{
+					FWallSaveData WallData;
+					WallData.WallTransform = WallActor->GetActorTransform();
+					WallData.WallMaterial = WallActor->WallMaterial_;
+					WallData.NoOfSegments = WallActor->NoOfSegments;
+					WallData.WallGeneratorActorMap = WallActor->WallGeneratorActorMap;
 
-				SaveArchVizInstance->FloorActorArray.Add(FloorData);
+					SaveArchVizInstance->WallActorArray.Add(WallData);
+				}
 			}
-		}
 
-		TArray<AActor*> RoofActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARoofGenerator::StaticClass(), RoofActors);
+			TArray<AActor*> FloorActors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFloorGenerator::StaticClass(), FloorActors);
 
-		for (AActor* Actor : RoofActors)
-		{
-			ARoofGenerator* RoofActor = Cast<ARoofGenerator>(Actor);
-			if (RoofActor)
+			for (AActor* Actor : FloorActors)
 			{
-				FRoofSaveData RoofData;
-				RoofData.RoofTransform = RoofActor->GetActorTransform();
-				RoofData.RoofMaterial = RoofActor->RoofMaterial;
-				RoofData.RoofDimensions = RoofActor->RoofDimensions;
+				AFloorGenerator* FloorActor = Cast<AFloorGenerator>(Actor);
+				if (FloorActor)
+				{
+					FFloorSaveData FloorData;
+					FloorData.FloorTransform = FloorActor->GetActorTransform();
+					FloorData.FloorMaterial = FloorActor->FloorMaterial;
+					FloorData.FloorDimensions = FloorActor->FloorDimensions;
 
-				SaveArchVizInstance->RoofActorArray.Add(RoofData);
+					SaveArchVizInstance->FloorActorArray.Add(FloorData);
+				}
 			}
-		}
 
-		TArray<AActor*> InteriorActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AInteriorDesignActor::StaticClass(), InteriorActors);
+			TArray<AActor*> RoofActors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARoofGenerator::StaticClass(), RoofActors);
 
-		for (AActor* Actor : InteriorActors)
-		{
-			AInteriorDesignActor* InteriorActor = Cast<AInteriorDesignActor>(Actor);
-			if (InteriorActor)
+			for (AActor* Actor : RoofActors)
 			{
-				FInteriorSaveData InteriorData;
-				InteriorData.InteriorTransform = InteriorActor->GetActorTransform();
-				InteriorData.InteriorIndex = InteriorActor->IdentityIndex;
-				InteriorData.InteriorMesh = InteriorActor->InteriorMesh;
+				ARoofGenerator* RoofActor = Cast<ARoofGenerator>(Actor);
+				if (RoofActor)
+				{
+					FRoofSaveData RoofData;
+					RoofData.RoofTransform = RoofActor->GetActorTransform();
+					RoofData.RoofMaterial = RoofActor->RoofMaterial;
+					RoofData.RoofDimensions = RoofActor->RoofDimensions;
 
-				SaveArchVizInstance->InteriorActorArray.Add(InteriorData);
+					SaveArchVizInstance->RoofActorArray.Add(RoofData);
+				}
 			}
+
+			TArray<AActor*> InteriorActors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), AInteriorDesignActor::StaticClass(), InteriorActors);
+
+			for (AActor* Actor : InteriorActors)
+			{
+				AInteriorDesignActor* InteriorActor = Cast<AInteriorDesignActor>(Actor);
+				if (InteriorActor)
+				{
+					FInteriorSaveData InteriorData;
+					InteriorData.InteriorTransform = InteriorActor->GetActorTransform();
+					InteriorData.InteriorIndex = InteriorActor->IdentityIndex;
+					InteriorData.InteriorMesh = InteriorActor->InteriorMesh;
+
+					SaveArchVizInstance->InteriorActorArray.Add(InteriorData);
+				}
+			}
+			UGameplayStatics::SaveGameToSlot(SaveArchVizInstance, SlotText.ToString(), 0);
 		}
-
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, "Saved");
-
-		UGameplayStatics::SaveGameToSlot(SaveArchVizInstance, SlotText.ToString(), 0);
 	}
 
 }
 
 void AArchVizController::LoadTemplate(const FText& Slot)
 {
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
 	UArchVizExplorerSave* LoadGameInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::LoadGameFromSlot(Slot.ToString(), 0));
 	if (LoadGameInstance)
 	{
@@ -472,35 +555,35 @@ void AArchVizController::EmptyViewportBeforeLoad()
 
 void AArchVizController::HideSaveAndLoadMenu()
 {
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::HideSaveMenu()
 {
-	HomeWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
+	SaveLoadWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AArchVizController::HideLoadMenu()
 {
-	HomeWidget->LoadMenu->SetVisibility(ESlateVisibility::Hidden);
-	HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
+	SaveLoadWidget->LoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AArchVizController::LoadTemplateList_()
 {
-	
-	HomeWidget->LoadAllTemplateList->ClearChildren();
+	SaveLoadWidget->LoadAllTemplateList->ClearChildren();
 
 	FString SavedDir = FPaths::ProjectSavedDir();
 	SavedDir.Append("/SaveGames");
 	auto array = FindFiles(SavedDir, ".sav");
 	if (array.Num() == 0) {
+		HomeWidget->PopUpText->SetText(FText::FromString("There is nothing in saved slot"));
 		HomeWidget->PlayAnimation(HomeWidget->PopUpAnimation);
 	}
 	else {
-		HomeWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
-		HomeWidget->LoadMenu->SetVisibility(ESlateVisibility::Visible);
+		SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
+		SaveLoadWidget->LoadMenu->SetVisibility(ESlateVisibility::Visible);
 		for (int i = 0; i < array.Num(); i++) {
 			if (ScrollBoxChildRef) {
 				ScrollBoxChild = CreateWidget<UScrollBoxChild>(this, ScrollBoxChildRef);
@@ -510,7 +593,7 @@ void AArchVizController::LoadTemplateList_()
 				ScrollBoxChild->OnDeleteTemplateSlotPressed.BindUFunction(this, "DeleteSavedSlot");
 				GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Black, "lOST");
 				ScrollBoxChild->TemplateName->SetText(FText::FromString(array[i].LeftChop(4)));
-				HomeWidget->LoadAllTemplateList->AddChild(ScrollBoxChild);
+				SaveLoadWidget->LoadAllTemplateList->AddChild(ScrollBoxChild);
 			}
 		}
 	}
