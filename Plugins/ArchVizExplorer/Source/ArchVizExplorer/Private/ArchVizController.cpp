@@ -1592,9 +1592,8 @@ void AArchVizController::OnWallDestroyerPressed()
 	}
 	bIsWallProjection = false;
 	bProjection = false;
-	BuildingConstructorWidget->WallDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->WallLocationBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->WallEditor->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::ControlWallGeneratorActorOnTick() {
@@ -1694,9 +1693,7 @@ void AArchVizController::OnFloorDestroyPressed()
 	bIsFloorProjection = false;
 	bProjection = false;
 
-	BuildingConstructorWidget->FloorDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->FloorLocationBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->FloorDimensionsBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->FloorEditor->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::OnFloorLengthChanged(float FloorLength)
@@ -1820,9 +1817,7 @@ void AArchVizController::OnRoofDestroyPressed()
 	}
 	bProjection = false;
 
-	BuildingConstructorWidget->RoofDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->RoofLocationBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->RoofDimensionsBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->RoofEditor->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::OnRoofLengthChanged(float RoofLength)
