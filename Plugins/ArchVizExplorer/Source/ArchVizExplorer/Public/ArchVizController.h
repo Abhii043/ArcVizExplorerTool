@@ -399,6 +399,8 @@ private:
 	UPROPERTY()
 	UInputAction* RotateInteriorAction;
 	UPROPERTY()
+	UInputAction* DestroyInteriorAction;
+	UPROPERTY()
 	AInteriorDesignActor* InteriorDesignActor;
 
 	UFUNCTION()
@@ -409,6 +411,8 @@ private:
 	void PlaceInteriorOnClick(); 
 	UFUNCTION()
 	void RotateInterior();
+	UFUNCTION()
+	void DestroyInterior();
 	UFUNCTION()
 	void ApplyInterior(const FInteriorData& InteriorData);
 	UFUNCTION()

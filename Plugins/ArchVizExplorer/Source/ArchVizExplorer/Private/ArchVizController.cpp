@@ -474,6 +474,10 @@ void AArchVizController::SaveTemplate()
 			UGameplayStatics::SaveGameToSlot(SaveArchVizInstance, SlotText.ToString(), 0);
 		}
 	}
+	else {
+		HomeWidget->PopUpText->SetText(FText::FromString("Enter Some Slot Name"));
+		HomeWidget->PlayAnimation(HomeWidget->PopUpAnimation);
+	}
 
 }
 
@@ -1428,6 +1432,9 @@ void AArchVizController::OnBuildingEditorModePressed()
 			if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
 			WallGeneratorActor = nullptr;
 		}
+		HomeWidget->PopUpText->SetText(FText::FromString("Click On Actor To Edit It"));
+		HomeWidget->PlayAnimation(HomeWidget->PopUpAnimation);
+		
 		BuildingConstructorWidget->Pop_Up->SetVisibility(ESlateVisibility::Visible);
 
 		BuildingConstructorWidget->BuildingOutlineBorder->SetVisibility(ESlateVisibility::Hidden);
@@ -2168,6 +2175,9 @@ void AArchVizController::OnMaterialManagmentPressed()
 		}
 	}
 
+	MaterialManagmentWidget->RoadMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
+	MaterialManagmentWidget->BuildingMaterialScrollBox->SetVisibility(ESlateVisibility::Hidden);
+
 	ConstructionModeHandler();
 }
 
@@ -2314,12 +2324,17 @@ void AArchVizController::SetInteriorDesignMapping()
 	RotateInteriorAction = NewObject<UInputAction>(this);
 	RotateInteriorAction->ValueType = EInputActionValueType::Boolean;
 
+	DestroyInteriorAction = NewObject<UInputAction>(this);
+	DestroyInteriorAction->ValueType = EInputActionValueType::Boolean;
+
 	InteriorDesignMapping->MapKey(PlaceInteriorAction, EKeys::LeftMouseButton);
 	InteriorDesignMapping->MapKey(RotateInteriorAction, EKeys::R);
+	InteriorDesignMapping->MapKey(DestroyInteriorAction, EKeys::D);
 
 	if (EIC) {
 		EIC->BindAction(PlaceInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::PlaceInteriorOnClick);
 		EIC->BindAction(RotateInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::RotateInterior);
+		EIC->BindAction(DestroyInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::DestroyInterior);
 	}
 }
 
@@ -2389,6 +2404,14 @@ void AArchVizController::RotateInterior()
 	if (InteriorDesignActor) {
 		InteriorDesignActor->SetActorRotation(InteriorDesignActor->GetActorRotation() + FRotator(0,90,0));
 	}
+}
+
+void AArchVizController::DestroyInterior()
+{
+	if (InteriorDesignActor) {
+		InteriorDesignActor->Destroy();
+		InteriorDesignActor = nullptr;;
+}
 }
 
 void AArchVizController::ApplyInterior(const FInteriorData& InteriorData)
