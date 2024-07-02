@@ -422,5 +422,5 @@ private:
 	UFUNCTION()
 	void PreviewRoofInteriorActor();
 	UFUNCTION()
-	FVector CheckPivotLocation(AInteriorDesignActor* InteriorActor, FVector Location);
+	FVector CheckPivotLocation(AInteriorDesignActor* InteriorActor, FVector Location ,const int32& indx);
 };

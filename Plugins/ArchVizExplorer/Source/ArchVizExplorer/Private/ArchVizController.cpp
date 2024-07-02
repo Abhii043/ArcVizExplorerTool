@@ -330,6 +330,9 @@ void AArchVizController::OnHomeButtonPressed()
 			SubSystem->ClearAllMappings();
 		}
 	}
+	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->SaveMenu->SetVisibility(ESlateVisibility::Hidden);
+	SaveLoadWidget->LoadMenu->SetVisibility(ESlateVisibility::Hidden);
 
 	SelectedWidget = EWidgetSelection::Home;
 	ConstructionModeHandler();
@@ -519,6 +522,7 @@ void AArchVizController::LoadTemplate(const FText& Slot)
 			InteriorGeneratorActor->InteriorMesh = InteriorData.InteriorMesh;
 			InteriorGeneratorActor->SetInteriorMesh(InteriorGeneratorActor->InteriorMesh);
 		}
+		OnHomeButtonPressed();
 	}
 }
 
@@ -2329,7 +2333,7 @@ void AArchVizController::SetInteriorDesignMapping()
 
 	InteriorDesignMapping->MapKey(PlaceInteriorAction, EKeys::LeftMouseButton);
 	InteriorDesignMapping->MapKey(RotateInteriorAction, EKeys::R);
-	InteriorDesignMapping->MapKey(DestroyInteriorAction, EKeys::D);
+	InteriorDesignMapping->MapKey(DestroyInteriorAction, EKeys::Delete);
 
 	if (EIC) {
 		EIC->BindAction(PlaceInteriorAction, ETriggerEvent::Completed, this, &AArchVizController::PlaceInteriorOnClick);
@@ -2402,7 +2406,7 @@ void AArchVizController::PlaceInteriorOnClick()
 void AArchVizController::RotateInterior()
 {
 	if (InteriorDesignActor) {
-		InteriorDesignActor->SetActorRotation(InteriorDesignActor->GetActorRotation() + FRotator(0,90,0));
+		InteriorDesignActor->SetActorRotation(InteriorDesignActor->GetActorRotation() + FRotator(0,30,0));
 	}
 }
 
@@ -2484,7 +2488,7 @@ void AArchVizController::PreviewFloorInteriorActor()
 			if(FVector(0,0,(FloorActor->FloorDimensions.Z + FloorActor->GetActorLocation().Z)).Equals(FVector(0,0,HitResult.Location.Z)))
 			{
 				if (InteriorDesignActor) {
-					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location));
+					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location , 1));
 				}
 			}
 		}
@@ -2504,14 +2508,14 @@ void AArchVizController::PreviewRoofInteriorActor()
 			if(FVector(0,0,RoofActor->GetActorLocation().Z).Equals(FVector(0,0,HitResult.Location.Z)))
 			{
 				if (InteriorDesignActor) {
-					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location));
+					InteriorDesignActor->SetActorLocation(CheckPivotLocation(InteriorDesignActor, HitResult.Location , 2));
 				}
 			}
 		}
 	}
 }
 
-FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorActor , FVector Location)
+FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorActor , FVector Location ,const int32& index)
 {
 	if(InteriorActor){
 		FVector PivotLocation = InteriorActor->InteriorMeshComponent->GetComponentLocation();
@@ -2520,8 +2524,15 @@ FVector AArchVizController::CheckPivotLocation(AInteriorDesignActor* InteriorAct
 		FVector Center = BoundingBox.GetCenter();
 
 		if (PivotLocation.Equals(Center)) {
+		if(index == 1)
+		{
 			float PreviewInteriorMeshLocationZ = (InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Z / 2);
-			Location.Z = PreviewInteriorMeshLocationZ;
+			Location.Z += PreviewInteriorMeshLocationZ;
+		}
+		else if (index == 2) {
+			float PreviewInteriorMeshLocationZ = (InteriorDesignActor->InteriorMesh->GetBounds().GetBox().GetSize().Z / 2);
+			Location.Z -= PreviewInteriorMeshLocationZ;
+		}
 		}
 	}
 	return Location;
