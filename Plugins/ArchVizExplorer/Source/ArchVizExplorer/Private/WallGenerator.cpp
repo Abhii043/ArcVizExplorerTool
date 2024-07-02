@@ -126,6 +126,10 @@ void AWallGenerator::GenerateWall(const int32& SegmentsNo)
 	}
 
 	SetDoorsAndPRoceduralMesh(SegmentsNo);
+
+	if (WallMaterial_) {
+		ApplyMaterialToWallActor(WallMaterial_);
+	}
 }
 
 void AWallGenerator::GenerateCube(const FVector& Dimensions, const FVector& LocationOffset, UProceduralMeshComponent* CubeComponent)
@@ -204,12 +208,17 @@ void AWallGenerator::GenerateCube(const FVector& Dimensions, const FVector& Loca
 	}
 
 	CubeComponent->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, Colors, Tangents, true);
-	CubeComponent->SetMaterial(0,ProceduralMeshMaterial);
+	CubeComponent->SetMaterial(0,WallMaterial_);
+	//CubeComponent->SetMaterial(0,ProceduralMeshMaterial);
 }
 
 void AWallGenerator::ApplyMaterialToWallActor(UMaterialInterface* WallMaterial)
 {
 	WallMaterial_ = WallMaterial;
+
+	if(ProceduralMeshMaterial) {
+		ProceduralMeshMaterial = WallMaterial;
+	}
 
 	UMaterialInstanceDynamic* DynamicWallMaterial1 = UMaterialInstanceDynamic::Create(WallMaterial, this);
 	UMaterialInstanceDynamic* DynamicWallMaterial2 = UMaterialInstanceDynamic::Create(WallMaterial, this);

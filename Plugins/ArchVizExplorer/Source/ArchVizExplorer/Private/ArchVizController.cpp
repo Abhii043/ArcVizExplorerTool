@@ -591,7 +591,6 @@ void AArchVizController::LoadTemplateList_()
 			if (ScrollBoxChild) {
 				ScrollBoxChild->OnTemplateSlotPressed.BindUFunction(this, "LoadTemplate");
 				ScrollBoxChild->OnDeleteTemplateSlotPressed.BindUFunction(this, "DeleteSavedSlot");
-				GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Black, "lOST");
 				ScrollBoxChild->TemplateName->SetText(FText::FromString(array[i].LeftChop(4)));
 				SaveLoadWidget->LoadAllTemplateList->AddChild(ScrollBoxChild);
 			}
@@ -712,6 +711,16 @@ void AArchVizController::AddBuildingComponentsMapping()
 void AArchVizController::SetDefaultBuildingMode()
 {
 	if (WallGeneratorActor) {
+		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
+			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
+			{
+				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(false);
+			}
+		}
+		for (auto& WallProcedural : WallGeneratorActor->WallGeneratorActorMap) {
+			WallProcedural.Value.ProceduralMesh->SetRenderCustomDepth(false);
+		}
+
 		WallGeneratorActor = nullptr;
 	}
 	if (DoorHighlightComponent) {
@@ -928,6 +937,8 @@ void AArchVizController::GenerateDoor() {
 						DoorComponent->SetRelativeLocation(DoorLocation);
 						DoorComponent->SetStaticMesh(DoorMesh);
 
+						DoorComponent->SetMaterial(0, nullptr);
+
 						CubeComponent->SetupAttachment(WallTempActor->GetRootComponent());
 						CubeComponent->RegisterComponentWithWorld(GetWorld());
 
@@ -936,6 +947,17 @@ void AArchVizController::GenerateDoor() {
 						CubeComponent->SetRelativeLocation(CubeLocation);
 						CubeComponent->SetVisibility(true);
 
+						if (WallTempActor->WallMaterial_) {
+							UMaterialInstanceDynamic* DynamicWallMaterial = UMaterialInstanceDynamic::Create(WallTempActor->WallMaterial_, this);
+							//FVector WallDimensions = WallTempActor->WallStaticMesh->GetBounds().GetBox().GetSize();
+							float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+							float TileY = 1;
+							DynamicWallMaterial->SetScalarParameterValue("TileX", TileX);
+							DynamicWallMaterial->SetScalarParameterValue("TileY", TileY);
+
+							CubeComponent->SetMaterial(0, DynamicWallMaterial);
+						}
+
 						int32 Index = WallTempActor->ComponentsArray.IndexOfByKey(Cast<UStaticMeshComponent>(HitResult.GetComponent()));
 						WallTempActor->WallGeneratorActorMap.Add(Index, { DoorMesh , CubeComponent });
 						WallTempActor->Indexs.Add(Index);
@@ -943,6 +965,7 @@ void AArchVizController::GenerateDoor() {
 					else {
 						DoorComponent->SetRelativeRotation(FRotator(0, 90, 0));
 						DoorComponent->SetStaticMesh(DoorMesh);
+						DoorComponent->SetMaterial(0, nullptr);
 					}
 				}
 			}
@@ -959,6 +982,7 @@ void AArchVizController::GenerateDoor() {
 				if (WallTempActor->ComponentsArray[key]) {
 					WallTempActor->ComponentsArray[key]->SetRelativeRotation(FRotator(0, 90, 0));
 					WallTempActor->ComponentsArray[key]->SetStaticMesh(DoorMesh);
+					WallTempActor->ComponentsArray[key]->SetMaterial(0, nullptr);
 				}
 			}
 		}
@@ -1502,6 +1526,17 @@ void AArchVizController::OnAssetSelection()
 					DoorHighlightComponent = Cast<UStaticMeshComponent>(HitResult.GetComponent());
 					DoorHighlightComponent->SetRenderCustomDepth(true);
 					DoorHighlightComponent->CustomDepthStencilValue = 2.0;
+
+					if (WallGeneratorActor->WallMaterial_) {
+						UMaterialInstanceDynamic* DynamicWallMaterial = UMaterialInstanceDynamic::Create(WallGeneratorActor->WallMaterial_, this);
+						FVector WallDimensions = WallGeneratorActor->WallStaticMesh->GetBounds().GetBox().GetSize();
+						float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+						float TileY = (WallDimensions.Z) / (WallDimensions.Z - 212);
+						DynamicWallMaterial->SetScalarParameterValue("TileX", TileX);
+						DynamicWallMaterial->SetScalarParameterValue("TileY", TileY);
+
+						DoorHighlightComponent->SetMaterial(0, DynamicWallMaterial);
+					}
 				}
 				EditDoor();
 			}
@@ -1514,12 +1549,18 @@ void AArchVizController::OnAssetSelection()
 			FloorGeneratorActor = Cast<AFloorGenerator>(HitResult.GetActor());
 			FloorGeneratorActor->FloorComponent->SetRenderCustomDepth(true);
 			FloorGeneratorActor->FloorComponent->CustomDepthStencilValue = 2.0;
+			if (FloorGeneratorActor->FloorMaterial) {
+				FloorGeneratorActor->ApplyFloorMaterial(FloorGeneratorActor->FloorMaterial);
+			}
 			EditFloor();
 		}
 		else if (Cast<ARoofGenerator>(HitResult.GetActor())) {
 			RoofGeneratorActor = Cast<ARoofGenerator>(HitResult.GetActor());
 			RoofGeneratorActor->RoofComponent->SetRenderCustomDepth(true);
 			RoofGeneratorActor->RoofComponent->CustomDepthStencilValue = 2.0;
+			if (RoofGeneratorActor->RoofMaterial) {
+				RoofGeneratorActor->ApplyRoofMaterial(RoofGeneratorActor->RoofMaterial);
+			}
 			EditRoof();
 		}
 		else {
@@ -1557,6 +1598,16 @@ void AArchVizController::EditWall()
 		for (int i{}; i < WallGeneratorActor->ComponentsArray.Num(); i++) {
 			if (WallGeneratorActor->WallHeight == WallGeneratorActor->ComponentsArray[i]->GetStaticMesh()->GetBounds().GetBox().GetSize().Z)
 			{
+				if(WallGeneratorActor->WallMaterial_){
+					UMaterialInstanceDynamic* DynamicWallMaterial = UMaterialInstanceDynamic::Create(WallGeneratorActor->WallMaterial_, this);
+					FVector WallDimensions = WallGeneratorActor->WallStaticMesh->GetBounds().GetBox().GetSize();
+					float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+					float TileY = (WallDimensions.Z) / (WallDimensions.Z - 212);
+					DynamicWallMaterial->SetScalarParameterValue("TileX", TileX);
+					DynamicWallMaterial->SetScalarParameterValue("TileY", TileY);
+					WallGeneratorActor->ComponentsArray[i]->SetMaterial(0, DynamicWallMaterial);
+				}
+
 				WallGeneratorActor->ComponentsArray[i]->SetRenderCustomDepth(true);
 				WallGeneratorActor->ComponentsArray[i]->CustomDepthStencilValue = 2.0;
 			}
@@ -1592,9 +1643,8 @@ void AArchVizController::OnWallDestroyerPressed()
 	}
 	bIsWallProjection = false;
 	bProjection = false;
-	BuildingConstructorWidget->WallDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->SegmentBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->WallLocationBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->WallEditor->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::ControlWallGeneratorActorOnTick() {
@@ -1637,6 +1687,16 @@ void AArchVizController::OnDoorDestroyerPressed()
 				Component->SetRelativeRotation(FRotator(0, 0, 0));
 				Component->SetStaticMesh(WallGeneratorActor->WallStaticMesh);
 
+				if(WallGeneratorActor->WallMaterial_){
+					UMaterialInstanceDynamic* DynamicWallMaterial = UMaterialInstanceDynamic::Create(WallGeneratorActor->WallMaterial_, this);
+					FVector WallDimensions = WallGeneratorActor->WallStaticMesh->GetBounds().GetBox().GetSize();
+					float TileX = (WallDimensions.X) / (WallDimensions.Z - 212);
+					float TileY = (WallDimensions.Z) / (WallDimensions.Z - 212);
+					DynamicWallMaterial->SetScalarParameterValue("TileX", TileX);
+					DynamicWallMaterial->SetScalarParameterValue("TileY", TileY);
+
+					Component->SetMaterial(0, DynamicWallMaterial);
+				}
 
 				FVector Location = Component->GetRelativeLocation();
 				Component->SetRelativeLocation(FVector(Location.X, Location.Y, Location.Z + (WallGeneratorActor->WallHeight / 2)));
@@ -1694,9 +1754,7 @@ void AArchVizController::OnFloorDestroyPressed()
 	bIsFloorProjection = false;
 	bProjection = false;
 
-	BuildingConstructorWidget->FloorDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->FloorLocationBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->FloorDimensionsBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->FloorEditor->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::OnFloorLengthChanged(float FloorLength)
@@ -1714,6 +1772,9 @@ void AArchVizController::OnFloorLengthChanged(float FloorLength)
 		}
 		FloorGeneratorActor->FloorDimensions.X = FloorLength;
 		FloorGeneratorActor->GenerateFloor(FloorDimensions);
+		if (FloorGeneratorActor->FloorMaterial) {
+			FloorGeneratorActor->ApplyFloorMaterial(FloorGeneratorActor->FloorMaterial);
+		}
 	}
 }
 
@@ -1732,6 +1793,9 @@ void AArchVizController::OnFloorWidthChanged(float FloorWidth)
 		}
 		FloorGeneratorActor->FloorDimensions.Y = FloorWidth;
 		FloorGeneratorActor->GenerateFloor(FloorDimensions);
+		if (FloorGeneratorActor->FloorMaterial) {
+			FloorGeneratorActor->ApplyFloorMaterial(FloorGeneratorActor->FloorMaterial);
+		}
 	}
 }
 
@@ -1750,6 +1814,9 @@ void AArchVizController::OnFloorHeightChanged(float FloorHeight)
 		}
 		FloorGeneratorActor->FloorDimensions.Z = FloorHeight;
 		FloorGeneratorActor->GenerateFloor(FloorDimensions);
+		if (FloorGeneratorActor->FloorMaterial) {
+			FloorGeneratorActor->ApplyFloorMaterial(FloorGeneratorActor->FloorMaterial);
+		}
 	}
 }
 
@@ -1820,9 +1887,7 @@ void AArchVizController::OnRoofDestroyPressed()
 	}
 	bProjection = false;
 
-	BuildingConstructorWidget->RoofDestroyer->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->RoofLocationBorder->SetVisibility(ESlateVisibility::Hidden);
-	BuildingConstructorWidget->RoofDimensionsBorder->SetVisibility(ESlateVisibility::Hidden);
+	BuildingConstructorWidget->RoofEditor->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void AArchVizController::OnRoofLengthChanged(float RoofLength)
@@ -1840,6 +1905,9 @@ void AArchVizController::OnRoofLengthChanged(float RoofLength)
 		}
 		RoofGeneratorActor->RoofDimensions.X = RoofLength;
 		RoofGeneratorActor->GenerateRoof(RoofDimensions);
+		if(RoofGeneratorActor->RoofMaterial){
+			RoofGeneratorActor->ApplyRoofMaterial(RoofGeneratorActor->RoofMaterial);
+		}
 	}
 }
 
@@ -1858,6 +1926,9 @@ void AArchVizController::OnRoofWidthChanged(float RoofWidth)
 		}
 		RoofGeneratorActor->RoofDimensions.Y = RoofWidth;
 		RoofGeneratorActor->GenerateRoof(RoofDimensions);
+		if (RoofGeneratorActor->RoofMaterial) {
+			RoofGeneratorActor->ApplyRoofMaterial(RoofGeneratorActor->RoofMaterial);
+		}
 	}
 }
 
@@ -1876,6 +1947,9 @@ void AArchVizController::OnRoofHeightChanged(float RoofHeight)
 		}
 		RoofGeneratorActor->RoofDimensions.Z = RoofHeight;
 		RoofGeneratorActor->GenerateRoof(RoofDimensions);
+		if (RoofGeneratorActor->RoofMaterial) {
+			RoofGeneratorActor->ApplyRoofMaterial(RoofGeneratorActor->RoofMaterial);
+		}
 	}
 }
 
