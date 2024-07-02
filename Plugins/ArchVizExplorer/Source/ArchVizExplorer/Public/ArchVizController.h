@@ -22,6 +22,8 @@
 #include <InteriorDesignActor.h>
 #include "ScrollBoxChild.h"
 #include <SaveLoadWidget.h>
+#include "TemplateActor.h"
+#include <StartMenuWidget.h>
 #include "ArchVizController.generated.h"
 
 UENUM()
@@ -31,7 +33,8 @@ enum class EWidgetSelection {
 	BuildingConstructor,
 	InteriorDesign,
 	MaterialManagment,
-	LoadSaveTemplate
+	LoadSaveSlot,
+	LoadTemplate
 };
 
 UENUM()
@@ -97,9 +100,9 @@ private:
 	UFUNCTION()
 	bool CheckFileExists(const FString& FileName);
 	UFUNCTION()
-	void SaveTemplate();
+	void SaveSlot();
 	UFUNCTION()
-	void LoadTemplate(const FText& Slot);
+	void LoadSlot(const FText& Slot);
 	UFUNCTION()
 	TArray<FString> FindFiles(FString Path, FString Extension);
 	UFUNCTION()
@@ -111,10 +114,40 @@ private:
 	UFUNCTION()
 	void HideLoadMenu();
 	UFUNCTION()
-	void LoadTemplateList_();
+	void LoadSlotList_();
 	UFUNCTION()
 	void DeleteSavedSlot(const FText& Slot);
 
+	//Template List
+	UPROPERTY(EditAnyWhere, category = "ArchVizController")
+	TSubclassOf<UStartMenuWidget> StartMenuWidgetClassRef;
+	UPROPERTY()
+	UStartMenuWidget* StartMenuWidget;
+	UPROPERTY()
+	ATemplateActor* TemplateActor;
+	UPROPERTY()
+	UInputMappingContext* TemplateMapping;
+	UPROPERTY()
+	UInputAction* PlaceTemplateAction;
+	UPROPERTY()
+	FString TemplateName;
+
+	UFUNCTION()
+	void OnTemplateSelection(FString TemplateName_, ESelectInfo::Type SelectionType);
+	UFUNCTION()
+	void OnCreateProjectPressed();
+	UFUNCTION()	
+	void OnLoadTemplatePressed();
+	UFUNCTION()	
+	void OnLoadPressed();
+	UFUNCTION()
+	void LoadTemplate(const FString& Slot);
+	UFUNCTION()
+	void SetTemplateActorMapping();
+	UFUNCTION()
+	void PlaceTemplateActor();
+	UFUNCTION()
+	void PreviewTemplateActor();
 
 	//Road Construction Mapping
 

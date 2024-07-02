@@ -17,9 +17,9 @@ class ARCHVIZEXPLORER_API USaveLoadWidget : public UUserWidget
 	
 public:
 	UPROPERTY(meta = (BindWidget))
-	UButton* SaveTemplate;
+	UButton* SaveSlot;
 	UPROPERTY(meta = (BindWidget))
-	UButton* LoadTemplate;
+	UButton* LoadSlot;
 	UPROPERTY(meta = (BindWidget))
 	UEditableText* SlotNameTxt;
 	UPROPERTY(meta = (BindWidget))

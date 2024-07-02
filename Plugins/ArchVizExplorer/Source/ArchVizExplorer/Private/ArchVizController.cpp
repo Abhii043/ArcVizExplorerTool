@@ -18,7 +18,10 @@ void AArchVizController::BeginPlay()
 
 	if (HomeWidgetClassRef) {
 		HomeWidget = CreateWidget<UHomeWidget>(this, HomeWidgetClassRef);
-		HomeWidget->AddToViewport();
+	}
+	if(StartMenuWidgetClassRef) {
+		StartMenuWidget = CreateWidget<UStartMenuWidget>(this , StartMenuWidgetClassRef);
+		StartMenuWidget->AddToViewport();
 	}
 	if (SaveLoadWidgetClassRef) {
 		SaveLoadWidget = CreateWidget<USaveLoadWidget>(this, SaveLoadWidgetClassRef);
@@ -38,7 +41,60 @@ void AArchVizController::BeginPlay()
 	BindWidgetDelegates();
 }
 
+void AArchVizController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	SetRoadConstructionMapping();
+	SetMaterialManagmentMapping();
+	SetInteriorDesignMapping();
+
+	SetWallConstructionMapping();
+	SetDoorConstructionMapping();
+	SetFloorConstructionMapping();
+	SetRoofConstructionMapping();
+	SetEditorModeMapping();
+	SetTemplateActorMapping();
+}
+
+void AArchVizController::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (SelectedWidget == EWidgetSelection::BuildingConstructor) {
+		if ((SelectedBuildingComponent == EBuildingComponentSelection::Wall) || bIsWallProjection) {
+			PreviewWallActor();
+		}
+		else if (SelectedBuildingComponent == EBuildingComponentSelection::Door) {
+			PreviewDoorActor();
+		}
+		else if (bIsFloorProjection) {
+			PreviewFloorActor();
+		}
+	}
+	if (SelectedWidget == EWidgetSelection::InteriorDesign) {
+		if (InteriorDesignActor)
+		{
+			if (InteriorDesignActor->IdentityIndex == 0)
+				PreviewWallInteriorActor();
+			else if (InteriorDesignActor->IdentityIndex == 1)
+				PreviewFloorInteriorActor();
+			else if (InteriorDesignActor->IdentityIndex == 2)
+				PreviewRoofInteriorActor();
+		}
+	}
+	if (SelectedWidget == EWidgetSelection::LoadTemplate) {
+		PreviewTemplateActor();
+	}
+}
+
 void AArchVizController::BindWidgetDelegates() {
+	if (StartMenuWidget) {
+		StartMenuWidget->CreateProject->OnClicked.AddDynamic(this, &AArchVizController::OnCreateProjectPressed);
+		StartMenuWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::OnLoadTemplatePressed);
+		StartMenuWidget->Load->OnClicked.AddDynamic(this, &AArchVizController::OnLoadPressed);
+		StartMenuWidget->TemplateBoxList->OnSelectionChanged.AddDynamic(this, &AArchVizController::OnTemplateSelection);
+}
 	if (HomeWidget) {
 		HomeWidget->RoadConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnRoadConstructionPressed);
 		HomeWidget->BuildingConstruction->OnClicked.AddDynamic(this, &AArchVizController::OnBuildingConstructionPressed);
@@ -48,9 +104,9 @@ void AArchVizController::BindWidgetDelegates() {
 		HomeWidget->Template->OnClicked.AddDynamic(this, &AArchVizController::OnTemplatePressed);
 	}
 	if (SaveLoadWidget) {		
-		SaveLoadWidget->SaveTemplate->OnClicked.AddDynamic(this, &AArchVizController::ToggleVisibility);
-		SaveLoadWidget->LoadTemplate->OnClicked.AddDynamic(this, &AArchVizController::LoadTemplateList_);
-		SaveLoadWidget->SaveBtn->OnClicked.AddDynamic(this, &AArchVizController::SaveTemplate);
+		SaveLoadWidget->SaveSlot->OnClicked.AddDynamic(this, &AArchVizController::ToggleVisibility);
+		SaveLoadWidget->LoadSlot->OnClicked.AddDynamic(this, &AArchVizController::LoadSlotList_);
+		SaveLoadWidget->SaveBtn->OnClicked.AddDynamic(this, &AArchVizController::SaveSlot);
 		SaveLoadWidget->Close_1->OnClicked.AddDynamic(this, &AArchVizController::HideSaveAndLoadMenu);
 		SaveLoadWidget->Close_2->OnClicked.AddDynamic(this, &AArchVizController::HideSaveMenu);
 		SaveLoadWidget->Close_3->OnClicked.AddDynamic(this, &AArchVizController::HideLoadMenu);
@@ -219,7 +275,7 @@ void AArchVizController::ConstructionModeHandler()
 		}
 		break;
 	}
-	case EWidgetSelection::LoadSaveTemplate:
+	case EWidgetSelection::LoadSaveSlot:
 	{
 		if (SaveLoadWidgetClassRef) {
 			if (SaveLoadWidget) {
@@ -249,6 +305,13 @@ void AArchVizController::ConstructionModeHandler()
 		break;
 	}
 	case EWidgetSelection::Home: {
+		if (HomeWidgetClassRef) {
+			if(HomeWidget){
+				if(!HomeWidget->IsInViewport()){
+					HomeWidget->AddToViewport();
+				}
+			}
+	}
 		if (SaveLoadWidget) {
 				SaveLoadWidget->IsInViewport();
 				SaveLoadWidget->RemoveFromParent();
@@ -360,7 +423,7 @@ void AArchVizController::OnTemplatePressed()
 		}
 	}
 
-	SelectedWidget = EWidgetSelection::LoadSaveTemplate;
+	SelectedWidget = EWidgetSelection::LoadSaveSlot;
 
 	ConstructionModeHandler();
 
@@ -379,7 +442,7 @@ bool AArchVizController::CheckFileExists(const FString& FileName) {
 	return FileManager.FileExists(*FilePath);
 }
 
-void AArchVizController::SaveTemplate()
+void AArchVizController::SaveSlot()
 {
 	FText SlotText = SaveLoadWidget->SlotNameTxt->GetText();
 	if (!SlotText.IsEmpty()) {
@@ -419,6 +482,7 @@ void AArchVizController::SaveTemplate()
 				{
 					FWallSaveData WallData;
 					WallData.WallTransform = WallActor->GetActorTransform();
+					WallData.WallMesh = WallActor->WallStaticMesh;
 					WallData.WallMaterial = WallActor->WallMaterial_;
 					WallData.NoOfSegments = WallActor->NoOfSegments;
 					WallData.WallGeneratorActorMap = WallActor->WallGeneratorActorMap;
@@ -487,7 +551,7 @@ void AArchVizController::SaveTemplate()
 
 }
 
-void AArchVizController::LoadTemplate(const FText& Slot)
+void AArchVizController::LoadSlot(const FText& Slot)
 {
 	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Hidden);
 	UArchVizExplorerSave* LoadGameInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::LoadGameFromSlot(Slot.ToString(), 0));
@@ -504,6 +568,7 @@ void AArchVizController::LoadTemplate(const FText& Slot)
 		{
 			AWallGenerator* WallActor = GetWorld()->SpawnActor<AWallGenerator>(WallGeneratorActorClassRef, WallData.WallTransform);
 			WallActor->WallGeneratorActorMap = WallData.WallGeneratorActorMap;
+			WallActor->WallStaticMesh = WallData.WallMesh;
 			WallActor->GenerateWall(WallData.NoOfSegments);
 			WallActor->ApplyMaterialToWallActor(WallData.WallMaterial);
 		}
@@ -581,7 +646,7 @@ void AArchVizController::HideLoadMenu()
 	SaveLoadWidget->SaveLoadMenu->SetVisibility(ESlateVisibility::Visible);
 }
 
-void AArchVizController::LoadTemplateList_()
+void AArchVizController::LoadSlotList_()
 {
 	SaveLoadWidget->LoadAllTemplateList->ClearChildren();
 
@@ -600,7 +665,7 @@ void AArchVizController::LoadTemplateList_()
 				ScrollBoxChild = CreateWidget<UScrollBoxChild>(this, ScrollBoxChildRef);
 			}
 			if (ScrollBoxChild) {
-				ScrollBoxChild->OnTemplateSlotPressed.BindUFunction(this, "LoadTemplate");
+				ScrollBoxChild->OnTemplateSlotPressed.BindUFunction(this, "LoadSlot");
 				ScrollBoxChild->OnDeleteTemplateSlotPressed.BindUFunction(this, "DeleteSavedSlot");
 				ScrollBoxChild->TemplateName->SetText(FText::FromString(array[i].LeftChop(4)));
 				SaveLoadWidget->LoadAllTemplateList->AddChild(ScrollBoxChild);
@@ -612,49 +677,157 @@ void AArchVizController::LoadTemplateList_()
 void AArchVizController::DeleteSavedSlot(const FText& Slot)
 {
 	UGameplayStatics::DeleteGameInSlot(Slot.ToString() , 0);
-	LoadTemplateList_();
+	LoadSlotList_();
 }
 
-void AArchVizController::SetupInputComponent()
+//Template Logic
+void AArchVizController::LoadTemplate(const FString& Slot)
 {
-	Super::SetupInputComponent();
+	UArchVizExplorerSave* LoadGameInstance = Cast<UArchVizExplorerSave>(UGameplayStatics::LoadGameFromSlot(Slot, 0));
+	if (LoadGameInstance)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		TemplateActor = GetWorld()->SpawnActor<ATemplateActor>(ATemplateActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
 
-	SetRoadConstructionMapping();
-	SetMaterialManagmentMapping();
-	SetInteriorDesignMapping();
+		EmptyViewportBeforeLoad();
 
-	SetWallConstructionMapping();
-	SetDoorConstructionMapping();
-	SetFloorConstructionMapping();
-	SetRoofConstructionMapping();
-	SetEditorModeMapping();
-}
+		for (const FRoadSaveData& RoadData : LoadGameInstance->RoadActorArray)
+		{
+			ARoadConstructor* RoadActor = GetWorld()->SpawnActor<ARoadConstructor>(RoadConstructorClassRef, RoadData.RoadTransform);
+			RoadActor->ApplyMaterialToRoad(RoadData.RoadMaterial);
+			RoadActor->GenerateRoad(RoadData.RoadDimensions);
 
-void AArchVizController::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-
-	if (SelectedWidget == EWidgetSelection::BuildingConstructor) {
-		if ((SelectedBuildingComponent == EBuildingComponentSelection::Wall) || bIsWallProjection) {
-			PreviewWallActor();
+			RoadActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
-		else if (SelectedBuildingComponent == EBuildingComponentSelection::Door) {
-			PreviewDoorActor();
+		for (const FWallSaveData& WallData : LoadGameInstance->WallActorArray)
+		{
+			AWallGenerator* WallActor = GetWorld()->SpawnActor<AWallGenerator>(WallGeneratorActorClassRef, WallData.WallTransform);
+			WallActor->WallGeneratorActorMap = WallData.WallGeneratorActorMap;
+			WallActor->WallStaticMesh = WallData.WallMesh;
+			WallActor->GenerateWall(WallData.NoOfSegments);
+			WallActor->ApplyMaterialToWallActor(WallData.WallMaterial);
+
+			WallActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
-		else if (bIsFloorProjection) {
-			PreviewFloorActor();
+		for (const FFloorSaveData& FloorData : LoadGameInstance->FloorActorArray)
+		{
+			AFloorGenerator* FloorActor = GetWorld()->SpawnActor<AFloorGenerator>(FloorGeneratorActorClassRef, FloorData.FloorTransform);
+			FloorActor->GenerateFloor(FloorData.FloorDimensions);
+			FloorActor->ApplyFloorMaterial(FloorData.FloorMaterial);
+
+			FloorActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
+		}
+		for (const FRoofSaveData& RoofData : LoadGameInstance->RoofActorArray)
+		{
+			ARoofGenerator* RoofActor = GetWorld()->SpawnActor<ARoofGenerator>(RoofGeneratorActorClassRef, RoofData.RoofTransform);
+			RoofActor->GenerateRoof(RoofData.RoofDimensions);
+			RoofActor->ApplyRoofMaterial(RoofData.RoofMaterial);
+
+			RoofActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
+		}
+		for (const FInteriorSaveData& InteriorData : LoadGameInstance->InteriorActorArray) {
+			AInteriorDesignActor* InteriorGeneratorActor = GetWorld()->SpawnActor<AInteriorDesignActor>(AInteriorDesignActor::StaticClass(), InteriorData.InteriorTransform);
+			InteriorGeneratorActor->IdentityIndex = InteriorData.InteriorIndex;
+			InteriorGeneratorActor->InteriorMesh = InteriorData.InteriorMesh;
+			InteriorGeneratorActor->SetInteriorMesh(InteriorGeneratorActor->InteriorMesh);
+
+			InteriorGeneratorActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 	}
-	if (SelectedWidget == EWidgetSelection::InteriorDesign) {
-		if(InteriorDesignActor)
-		{
-		if(InteriorDesignActor->IdentityIndex == 0)
-			PreviewWallInteriorActor();
-		else if(InteriorDesignActor->IdentityIndex == 1)
-			PreviewFloorInteriorActor();
-		else if(InteriorDesignActor->IdentityIndex == 2)
-			PreviewRoofInteriorActor();
+}
+
+void AArchVizController::SetTemplateActorMapping()
+{
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+
+	TemplateMapping = NewObject<UInputMappingContext>(this);
+
+	PlaceTemplateAction = NewObject<UInputAction>(this);
+	PlaceTemplateAction->ValueType = EInputActionValueType::Boolean;
+
+	TemplateMapping->MapKey(PlaceTemplateAction, EKeys::LeftMouseButton);
+
+	if (EIC) {
+		EIC->BindAction(PlaceTemplateAction, ETriggerEvent::Completed, this, &AArchVizController::PlaceTemplateActor);
+	}
+}
+
+void AArchVizController::PlaceTemplateActor()
+{
+	if (TemplateActor) {
+		TemplateActor = nullptr;
+
+		OnHomeButtonPressed();
+	}
+
+}
+
+void AArchVizController::PreviewTemplateActor()
+{
+	if (TemplateActor) {
+		FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true , TemplateActor);
+		FVector CursorWorldLocation;
+		FVector CursorWorldDirection;
+
+		DeprojectMousePositionToWorld(CursorWorldLocation, CursorWorldDirection);
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, CursorWorldLocation, CursorWorldLocation + CursorWorldDirection * 10000, ECC_Visibility, TraceParams))
+		{	
+			TemplateActor->SetActorLocation(HitResult.Location);
 		}
+	}
+}
+
+void AArchVizController::OnTemplateSelection(FString TemplateName_, ESelectInfo::Type SelectionType)
+{
+	TemplateName = TemplateName_;
+}
+
+void AArchVizController::OnCreateProjectPressed()
+{
+	if (StartMenuWidget) {
+		if (StartMenuWidget->IsInViewport()) {
+			StartMenuWidget->RemoveFromParent();
+		}
+	}
+	if (HomeWidget) {
+		HomeWidget->AddToViewport();
+	}
+	OnHomeButtonPressed();
+}
+
+void AArchVizController::OnLoadTemplatePressed()
+{
+	StartMenuWidget->ListBox->SetVisibility(ESlateVisibility::Visible);
+	SelectedWidget = EWidgetSelection::LoadTemplate;
+
+	FString SavedDir = FPaths::ProjectSavedDir();
+	SavedDir.Append("/Templates");
+	auto Array = FindFiles(SavedDir, ".sav");
+
+	StartMenuWidget->TemplateBoxList->ClearOptions();
+
+	for (int i{}; i < Array.Num(); i++) {
+		StartMenuWidget->TemplateBoxList->AddOption(Array[i].LeftChop(4));
+	}
+}
+
+void AArchVizController::OnLoadPressed()
+{
+	if(!TemplateName.IsEmpty()){
+		if (GetLocalPlayer()) {
+			UEnhancedInputLocalPlayerSubsystem* SubSystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+			if (SubSystem) {
+				SubSystem->ClearAllMappings();
+				SubSystem->AddMappingContext(TemplateMapping, 0);
+			}
+		}
+		if (StartMenuWidget) {
+			if (StartMenuWidget->IsInViewport()) {
+				StartMenuWidget->RemoveFromParent();
+			}
+		}
+		LoadTemplate(TemplateName);
 	}
 }
 
@@ -1596,6 +1769,7 @@ void AArchVizController::EditWall()
 	BuildingConstructorWidget->WallDestroyer->SetVisibility(ESlateVisibility::Visible);
 	BuildingConstructorWidget->WallLocationBorder->SetVisibility(ESlateVisibility::Visible);
 	BuildingConstructorWidget->WallEditor->SetVisibility(ESlateVisibility::Visible);
+	BuildingConstructorWidget->WallScrollBox->SetVisibility(ESlateVisibility::Visible);
 
 	BuildingConstructorWidget->RoofEditor->SetVisibility(ESlateVisibility::Hidden);
 	BuildingConstructorWidget->FloorEditor->SetVisibility(ESlateVisibility::Hidden);

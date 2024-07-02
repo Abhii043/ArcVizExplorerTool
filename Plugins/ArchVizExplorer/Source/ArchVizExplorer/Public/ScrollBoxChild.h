@@ -18,7 +18,7 @@ class ARCHVIZEXPLORER_API UScrollBoxChild : public UUserWidget
 	
 	public:
 		UPROPERTY(meta = (BindWidget))
-		UButton* LoadTemplateSlot;
+		UButton* LoadSlotSlot;
 		UPROPERTY(meta = (BindWidget))
 		UTextBlock* TemplateName;
 		UPROPERTY(meta = (BindWidget))

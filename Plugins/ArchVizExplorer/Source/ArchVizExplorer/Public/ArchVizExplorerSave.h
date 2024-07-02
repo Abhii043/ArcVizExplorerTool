@@ -32,6 +32,9 @@ struct FWallSaveData {
 	UMaterialInterface* WallMaterial;
 
 	UPROPERTY()
+	UStaticMesh* WallMesh;
+
+	UPROPERTY()
 	int32 NoOfSegments;
 
 	UPROPERTY()

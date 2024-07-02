@@ -223,8 +223,11 @@ void AWallGenerator::ApplyMaterialToWallActor(UMaterialInterface* WallMaterial)
 	UMaterialInstanceDynamic* DynamicWallMaterial1 = UMaterialInstanceDynamic::Create(WallMaterial, this);
 	UMaterialInstanceDynamic* DynamicWallMaterial2 = UMaterialInstanceDynamic::Create(WallMaterial, this);
 	if (DynamicWallMaterial1 && DynamicWallMaterial2) {
-		FVector WallDimensions = WallStaticMesh->GetBounds().GetBox().GetSize();
+		FVector WallDimensions{};
 
+		if(WallStaticMesh){
+			WallDimensions = WallStaticMesh->GetBounds().GetBox().GetSize();
+		}
 
 		for (int i{} ;  i<ComponentsArray.Num() ; ++i) {
 			if (WallGeneratorActorMap.Contains(i)) {

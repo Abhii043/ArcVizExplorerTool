@@ -6,8 +6,8 @@
 void UScrollBoxChild::NativeConstruct()
 {
 	Super::NativeConstruct();
-	if (LoadTemplateSlot) {
-		LoadTemplateSlot->OnClicked.AddDynamic(this, &UScrollBoxChild::AfterSlotSelected);
+	if (LoadSlotSlot) {
+		LoadSlotSlot->OnClicked.AddDynamic(this, &UScrollBoxChild::AfterSlotSelected);
 		DeleteSlot->OnClicked.AddDynamic(this, &UScrollBoxChild::AfterSlotDeleteButtonPressed);
 	}
 }
