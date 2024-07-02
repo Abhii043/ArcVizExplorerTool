@@ -129,7 +129,9 @@ private:
 	UPROPERTY()
 	UInputMappingContext* RoadMapping;
 	UPROPERTY()
-	UInputAction* GenerateRoadAction; 
+	UInputAction* GenerateRoadAction;
+	UPROPERTY()
+	UInputAction* DeleteRoadAction;
 	UPROPERTY()
 	FVector RoadStartLocation;
 	UPROPERTY()
@@ -163,6 +165,8 @@ private:
 	void OnRoadEditorModePressed(); 
 	UFUNCTION()
 	void OnRoadWidthChanged(float Value);
+	UFUNCTION()
+	void DeleteRoad();
 
 	//BuildingConstructor Logic
 	UPROPERTY(EditAnyWhere, category = "ArchVizController")

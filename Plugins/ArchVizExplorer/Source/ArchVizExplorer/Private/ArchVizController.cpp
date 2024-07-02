@@ -282,6 +282,9 @@ void AArchVizController::HandleModeChange()
 {
 	if (RoadConstructor) {
 		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(false);
+		bFirstRoad = true;
+		bGetLocation = true;
+		RoadConstructor = nullptr;
 	}
 	if (IsValid(WallGeneratorActor)) {
 		if (!bBuildingEditorMode) { WallGeneratorActor->Destroy(); }
@@ -2097,10 +2100,15 @@ void AArchVizController::SetRoadConstructionMapping()
 	GenerateRoadAction = NewObject<UInputAction>(this);
 	GenerateRoadAction->ValueType = EInputActionValueType::Boolean;
 
+	DeleteRoadAction = NewObject<UInputAction>(this);
+	DeleteRoadAction->ValueType = EInputActionValueType::Boolean;
+
 	RoadMapping->MapKey(GenerateRoadAction, EKeys::LeftMouseButton);
+	RoadMapping->MapKey(DeleteRoadAction, EKeys::Delete);
 
 	if (EIC) {
 		EIC->BindAction(GenerateRoadAction, ETriggerEvent::Completed, this, &AArchVizController::GetRoadLocationOnClick);
+		EIC->BindAction(DeleteRoadAction, ETriggerEvent::Completed, this, &AArchVizController::DeleteRoad);
 	}
 }
 
@@ -2148,6 +2156,11 @@ void AArchVizController::OnRoadEditorModePressed()
 		RoadWidget->OutlineBorder->SetVisibility(ESlateVisibility::Visible);
 		RoadWidget->RoadEditor->SetVisibility(ESlateVisibility::Hidden);
 		bRoadEditorMode = true;
+		bFirstRoad = true;
+		bGetLocation = true;
+		if (RoadConstructor) {
+			RoadConstructor = nullptr;
+		}
 	}
 	else {
 		FText Text = FText::FromString("Editor Mode");
@@ -2161,6 +2174,15 @@ void AArchVizController::OnRoadEditorModePressed()
 void AArchVizController::OnRoadWidthChanged(float Value)
 {
 	if (RoadConstructor) { RoadConstructor->SetActorScale3D(FVector(1, Value / RoadDimensions.Y, 1)); }
+}
+
+void AArchVizController::DeleteRoad()
+{
+	if(RoadConstructor && bRoadEditorMode){
+		RoadConstructor->ProceduralMeshComponent->SetRenderCustomDepth(false);
+		RoadConstructor->Destroy();
+		RoadConstructor = nullptr;
+	}
 }
 
 //Material Managment
