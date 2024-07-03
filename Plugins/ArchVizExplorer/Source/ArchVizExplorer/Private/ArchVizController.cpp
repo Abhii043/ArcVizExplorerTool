@@ -762,7 +762,6 @@ void AArchVizController::PlaceTemplateActor()
 {
 	if (TemplateActor) {
 		TemplateActor = nullptr;
-		IgnoreActorArray.Empty();
 		OnHomeButtonPressed();
 	}
 
