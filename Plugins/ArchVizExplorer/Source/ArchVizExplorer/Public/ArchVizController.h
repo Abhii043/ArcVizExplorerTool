@@ -131,6 +131,8 @@ private:
 	UInputAction* PlaceTemplateAction;
 	UPROPERTY()
 	FString TemplateName;
+	UPROPERTY()
+	TArray<AActor*> IgnoreActorArray;
 
 	UFUNCTION()
 	void OnTemplateSelection(FString TemplateName_, ESelectInfo::Type SelectionType);

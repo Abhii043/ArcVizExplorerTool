@@ -698,6 +698,7 @@ void AArchVizController::LoadTemplate(const FString& Slot)
 			RoadActor->ApplyMaterialToRoad(RoadData.RoadMaterial);
 			RoadActor->GenerateRoad(RoadData.RoadDimensions);
 
+			IgnoreActorArray.Add(RoadActor);
 			RoadActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 		for (const FWallSaveData& WallData : LoadGameInstance->WallActorArray)
@@ -708,6 +709,7 @@ void AArchVizController::LoadTemplate(const FString& Slot)
 			WallActor->GenerateWall(WallData.NoOfSegments);
 			WallActor->ApplyMaterialToWallActor(WallData.WallMaterial);
 
+			IgnoreActorArray.Add(WallActor);
 			WallActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 		for (const FFloorSaveData& FloorData : LoadGameInstance->FloorActorArray)
@@ -716,6 +718,7 @@ void AArchVizController::LoadTemplate(const FString& Slot)
 			FloorActor->GenerateFloor(FloorData.FloorDimensions);
 			FloorActor->ApplyFloorMaterial(FloorData.FloorMaterial);
 
+			IgnoreActorArray.Add(FloorActor);
 			FloorActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 		for (const FRoofSaveData& RoofData : LoadGameInstance->RoofActorArray)
@@ -724,6 +727,7 @@ void AArchVizController::LoadTemplate(const FString& Slot)
 			RoofActor->GenerateRoof(RoofData.RoofDimensions);
 			RoofActor->ApplyRoofMaterial(RoofData.RoofMaterial);
 
+			IgnoreActorArray.Add(RoofActor);
 			RoofActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 		for (const FInteriorSaveData& InteriorData : LoadGameInstance->InteriorActorArray) {
@@ -732,6 +736,7 @@ void AArchVizController::LoadTemplate(const FString& Slot)
 			InteriorGeneratorActor->InteriorMesh = InteriorData.InteriorMesh;
 			InteriorGeneratorActor->SetInteriorMesh(InteriorGeneratorActor->InteriorMesh);
 
+			IgnoreActorArray.Add(InteriorGeneratorActor);
 			InteriorGeneratorActor->AttachToActor(TemplateActor, FAttachmentTransformRules::KeepRelativeTransform);
 		}
 	}
@@ -757,7 +762,7 @@ void AArchVizController::PlaceTemplateActor()
 {
 	if (TemplateActor) {
 		TemplateActor = nullptr;
-
+		IgnoreActorArray.Empty();
 		OnHomeButtonPressed();
 	}
 
@@ -767,6 +772,7 @@ void AArchVizController::PreviewTemplateActor()
 {
 	if (TemplateActor) {
 		FCollisionQueryParams TraceParams(FName(TEXT("LineTrace")), true , TemplateActor);
+		TraceParams.AddIgnoredActors(IgnoreActorArray);
 		FVector CursorWorldLocation;
 		FVector CursorWorldDirection;
 
